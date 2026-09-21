@@ -11,6 +11,10 @@
 *.key
 *.pem
 
+# Metadatos Locales y Sesiones de Salesforce CLI
+.sf/
+.sfdx/
+
 # Entornos Virtuales de Python
 .venv/
 venv/
