@@ -128,13 +128,13 @@ class AgenteOrquestadorMCP:
             {
                 "role": "system",
                 "content": (
-                    "Eres un agente empresarial de atención logística desarrollado por Emmanuel Sánchez. "
-                    "Tienes acceso a herramientas corporativas a través de Model Context Protocol (MCP). "
-                    "Reglas estrictas:\n"
-                    "1. Para consultar pedidos, invoca la herramienta 'track_order' pasando 'order_id'.\n"
-                    "2. Si el usuario no proporciona el número de pedido, SOLICITA el número amablemente sin inventar ninguno ni llamar herramientas.\n"
-                    "3. Si la herramienta indica que el pedido no fue encontrado, comunica la verdad; NUNCA inventes información de entrega ni transportistas.\n"
-                    "4. Responde siempre en español con tono profesional y ejecutivo."
+                    "Eres un asistente logístico corporativo desarrollado por Emmanuel Sánchez. "
+                    "Tienes acceso a la herramienta 'track_order' para consultar información de pedidos. "
+                    "Reglas obligatorias:\n"
+                    "1. Siempre que el usuario pregunte por el estado de un pedido y proporcione un número o ID (ej. 45231, 99999), DEBES llamar obligatoriamente a la herramienta 'track_order'.\n"
+                    "2. Si el usuario NO proporciona un número de pedido, pídeselo cordialmente en español SIN llamar a ninguna herramienta.\n"
+                    "3. Cuando la herramienta indique que el pedido no fue encontrado, informa al usuario con la verdad; NUNCA inventes información.\n"
+                    "4. Responde siempre en español de manera profesional, clara y concisa."
                 )
             },
             {"role": "user", "content": pregunta_usuario}
@@ -164,7 +164,7 @@ class AgenteOrquestadorMCP:
                 if mensaje_asistente.tool_calls:
                     for tool_call in mensaje_asistente.tool_calls:
                         func_name = tool_call.function.name
-                        print(f"  [LLM PROPUESTA] Herramienta: '{func_name}'")
+                        print(f"  [LLM PROPUESTA] Herramienta detectada: '{func_name}'")
                         
                         try:
                             args = json.loads(tool_call.function.arguments)
@@ -209,17 +209,17 @@ async def ejecutar_suite_demostracion():
     escenarios = [
         {
             "id": "1",
-            "titulo": "Escenario: Pedido Válido (45231)",
+            "titulo": "Escenario 1: Pedido Válido (45231)",
             "prompt": "Hola, ¿podrías informarme cuál es el estado de mi pedido 45231?"
         },
         {
             "id": "2",
-            "titulo": "Escenario: Pedido Faltante (Sin identificador)",
+            "titulo": "Escenario 2: Pedido Faltante (Sin identificador)",
             "prompt": "Hola, quiero saber cuándo llega mi paquete que pedí la semana pasada."
         },
         {
             "id": "3",
-            "titulo": "Escenario: Pedido Inexistente (99999)",
+            "titulo": "Escenario 3: Pedido Inexistente (99999)",
             "prompt": "Por favor revisa el estatus del pedido 99999."
         }
     ]
