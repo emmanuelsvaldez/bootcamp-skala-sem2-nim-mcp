@@ -36,24 +36,37 @@ Para evitar errores conceptuales en diseño de software y auditorías de segurid
 
 Uno de los pilares arquitectónicos más relevantes de esta implementación para **evaluaciones técnicas y reclutadores de ingeniería** es la eliminación absoluta del *Vendor Lock-in* mediante el desacoplamiento de la capa de inferencia:
 
-```text
-                               ┌────────────────────────────────────────────────────────┐
-                               │                 LLMProviderFactory                     │
-                               │           (Patrón Creacional / Adapter)                │
-                               └──────────────────────────┬─────────────────────────────┘
-                                                          │
-                                         ¿LLM_PROVIDER en .env?
-                                         /                      \
-                                    'nvidia'                  'ollama'
-                                       /                          \
-             ▼───────────────────────────────────────▼      ▼───────────────────────────────────────▼
-             │      NVIDIA NIM (Cloud API)           │      │       Ollama (Local Runtime)          │
-             ├───────────────────────────────────────┤      ├───────────────────────────────────────┤
-             │ • Endpoint: integrate.api.nvidia.com  │      │ • Endpoint: localhost:11434           │
-             │ • Modelo: Nemotron / Llama 70B        │      │ • Modelo: llama3-groq-tool-use:8b     │
-             │ • Entorno: Producción masiva en nube  │      │ • Entorno: Edge / Dev Offline / 0$    │
-             │ • Autenticación: NVIDIA_API_KEY       │      │ • Privacidad: 100% de datos en local  │
-             └───────────────────────────────────────┘      └───────────────────────────────────────┘
+```mermaid
+flowchart TD
+    Factory["🏭 LLMProviderFactory\n(Patrón Creacional / Adapter)"]
+    Decision{"¿LLM_PROVIDER en .env?"}
+    
+    subgraph Cloud ["☁️ Nube: Producción & Escalabilidad"]
+        direction TB
+        NIM["🚀 NVIDIA NIM (Cloud API)"]
+        NIM_Det["• Endpoint: integrate.api.nvidia.com\n• Modelo: Nemotron / Llama 70B\n• Cómputo: Tensor Core GPUs (Cloud)\n• Autenticación: NVIDIA_API_KEY"]
+        NIM --- NIM_Det
+    end
+
+    subgraph Local ["💻 Local: Desarrollo & Privacidad"]
+        direction TB
+        Ollama["⚡ Ollama (Local Runtime)"]
+        OLL_Det["• Endpoint: localhost:11434\n• Modelo: llama3-groq-tool-use:8b\n• Cómputo: Híbrido GPU + 32GB RAM\n• Costo: $0 / 100% Offline"]
+        Ollama --- OLL_Det
+    end
+
+    Factory --> Decision
+    Decision -- "'nvidia' (Producción)" --> NIM
+    Decision -- "'ollama' (Desarrollo / Offline)" --> Ollama
+
+    style Factory fill:#eff6ff,stroke:#2563eb,stroke-width:2px,color:#1e3a8a
+    style Decision fill:#fef3c7,stroke:#d97706,stroke-width:2px,color:#92400e
+    style Cloud fill:#f0fdf4,stroke:#16a34a,stroke-width:2px
+    style Local fill:#faf5ff,stroke:#9333ea,stroke-width:2px
+    style NIM fill:#ffffff,stroke:#16a34a,stroke-width:2px
+    style Ollama fill:#ffffff,stroke:#9333ea,stroke-width:2px
+    style NIM_Det fill:#ffffff,stroke:#86efac,stroke-dasharray: 5 5
+    style OLL_Det fill:#ffffff,stroke:#d8b4fe,stroke-dasharray: 5 5
 ```
 
 ### Justificación de Ingeniería para Entornos Enterprise:
@@ -161,23 +174,6 @@ python verificar_entorno.py
 cp .env.example .env
 ```
 Edita `.env` con tu configuración (`LLM_PROVIDER=ollama` para pruebas locales o `LLM_PROVIDER=nvidia` para la nube).
-
-### Paso 4: Protocolo para Retomar el Proyecto (Quickstart si cierras la terminal)
-Si cierras tu terminal o reinicias el equipo:
-```powershell
-# 1. Navegar y activar entorno
-cd D:\bootcampSem2
-.venv\Scripts\Activate.ps1
-
-# 2. Si usas Ollama Local, asegúrate de que el daemon esté activo
-# (Abre la app de Ollama en Windows o corre en otra consola: ollama serve)
-
-# 3. Ejecutar el Agente con MCP
-python agente_nim_mcp.py
-
-# 4. O correr pruebas unitarias del servidor MCP
-python test_servidor_mcp.py
-```
 
 ---
 
