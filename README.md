@@ -128,11 +128,23 @@ python verificar_entorno.py
 ```bash
 cp .env.example .env
 ```
-Edita `.env` con tu clave autorizada proporcionada por el instructor:
-```env
-NVIDIA_API_KEY=nvapi-tu-clave-aqui
-NVIDIA_BASE_URL=https://integrate.api.nvidia.com/v1
-NVIDIA_MODEL=meta/llama-3.1-8b-instruct
+Edita `.env` con tu configuración (`LLM_PROVIDER=ollama` para pruebas locales o `LLM_PROVIDER=nvidia` para la nube).
+
+### Paso 4: Protocolo para Retomar el Proyecto (Quickstart si cierras la terminal)
+Si cierras tu terminal o reinicias el equipo:
+```powershell
+# 1. Navegar y activar entorno
+cd D:\bootcampSem2
+.venv\Scripts\Activate.ps1
+
+# 2. Si usas Ollama Local, asegúrate de que el daemon esté activo
+# (Abre la app de Ollama en Windows o corre en otra consola: ollama serve)
+
+# 3. Ejecutar el Agente con MCP
+python agente_nim_mcp.py
+
+# 4. O correr pruebas unitarias del servidor MCP
+python test_servidor_mcp.py
 ```
 
 ---
