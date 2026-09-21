@@ -32,7 +32,38 @@ Para evitar errores conceptuales en diseño de software y auditorías de segurid
 
 ---
 
-## 3. Diagrama de Arquitectura de la Solución
+## 3. Patrón de Inferencia Híbrida Desacoplada (Factory / Adapter Pattern)
+
+Uno de los pilares arquitectónicos más relevantes de esta implementación para **evaluaciones técnicas y reclutadores de ingeniería** es la eliminación absoluta del *Vendor Lock-in* mediante el desacoplamiento de la capa de inferencia:
+
+```text
+                               ┌────────────────────────────────────────────────────────┐
+                               │                 LLMProviderFactory                     │
+                               │           (Patrón Creacional / Adapter)                │
+                               └──────────────────────────┬─────────────────────────────┘
+                                                          │
+                                         ¿LLM_PROVIDER en .env?
+                                         /                      \
+                                    'nvidia'                  'ollama'
+                                       /                          \
+             ▼───────────────────────────────────────▼      ▼───────────────────────────────────────▼
+             │      NVIDIA NIM (Cloud API)           │      │       Ollama (Local Runtime)          │
+             ├───────────────────────────────────────┤      ├───────────────────────────────────────┤
+             │ • Endpoint: integrate.api.nvidia.com  │      │ • Endpoint: localhost:11434           │
+             │ • Modelo: Nemotron / Llama 70B        │      │ • Modelo: llama3-groq-tool-use:8b     │
+             │ • Entorno: Producción masiva en nube  │      │ • Entorno: Edge / Dev Offline / 0$    │
+             │ • Autenticación: NVIDIA_API_KEY       │      │ • Privacidad: 100% de datos en local  │
+             └───────────────────────────────────────┘      └───────────────────────────────────────┘
+```
+
+### Justificación de Ingeniería para Entornos Enterprise:
+1. **Eficiencia de Costos y Privacidad (Edge Computing):** Durante fases de desarrollo, depuración y pruebas unitarias de herramientas MCP, el sistema opera con **Ollama Local** (`llama3-groq-tool-use:8b`). Esto permite iterar con latencia baja, sin costo por token y con privacidad total de datos confidenciales.
+2. **Escalabilidad en Producción:** Cuando el sistema pasa a cargas de trabajo intensivas, se conmuta a **NVIDIA NIM** simplemente cambiando `LLM_PROVIDER=nvidia` en `.env`. NIM aporta inferencia acelerada sobre GPUs empresariales Tensor Core y microservicios contenerizados.
+3. **Principio de Sustitución de Liskov e Interfaz Común:** Ambas soluciones implementan contratos compatibles con la especificación OpenAI (`/v1/chat/completions`), permitiendo al agente orquestador (`AgenteOrquestadorMCP`) descubrir, validar y ejecutar herramientas MCP sin cambiar una sola línea de código fuente.
+
+---
+
+## 4. Diagrama de Arquitectura de la Solución
 
 ```mermaid
 flowchart TD
@@ -81,7 +112,7 @@ flowchart TD
 
 ---
 
-## 4. Estructura del Proyecto
+## 5. Estructura del Proyecto
 
 ```text
 D:\bootcampSem2\
@@ -93,12 +124,13 @@ D:\bootcampSem2\
 ├── probar_nim.py           # Validación aislada de inferencia contra NVIDIA NIM
 ├── servidor_mcp.py         # Servidor MCP con herramienta 'track_order'
 ├── test_servidor_mcp.py    # Pruebas unitarias de descubrimiento e invocación MCP
-└── agente_nim_mcp.py       # Agente orquestador con soporte NIM / Ollama y MCP
+├── agente_nim_mcp.py       # Agente orquestador con soporte NIM / Ollama y MCP
+└── test_suite_automatizada.py # Suite de pruebas automatizadas con pytest
 ```
 
 ---
 
-## 5. Guía de Instalación y Ejecución Paso a Paso
+## 6. Guía de Instalación y Ejecución Paso a Paso
 
 ### Paso 1: Configurar el Entorno Virtual
 
@@ -149,7 +181,7 @@ python test_servidor_mcp.py
 
 ---
 
-## 6. Políticas de Seguridad Zero-Trust Aplicadas
+## 7. Políticas de Seguridad Zero-Trust Aplicadas
 
 1. **Gestión de Secretos:** `.env` está expresamente excluido en `.gitignore`. Ninguna clave se imprime en logs ni se envía en prompts.
 2. **Control de Bucles Infinitos:** El orquestador limita a **3 iteraciones máximas** el ciclo de tool calling.
