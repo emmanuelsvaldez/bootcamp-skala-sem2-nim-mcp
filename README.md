@@ -80,47 +80,72 @@ flowchart TD
 
 ```mermaid
 flowchart TD
-    subgraph Usuario ["Capa de Presentación"]
-        U["Operador / Cliente Final"]
+    subgraph Usuario ["Capa de Experiencia"]
+        U(["👤 Operador / Usuario Final"])
     end
 
     subgraph Agente ["Capa de Orquestación Agéntica (Python / Antigravity IDE)"]
-        A["Core del Agente (agente_nim_mcp.py)"]
-        AL["Allowlist & Validador de Esquemas"]
-        L["Loop Seguro (Máx 3 Iteraciones)"]
+        A["🧠 Agente Orquestador\n(agente_nim_mcp.py)"]
+        AL["🛡️ Allowlist Estricta\n(track_order)"]
+        LOOP["🔁 Loop Seguro\n(Máx 3 Iteraciones)"]
+        FACTORY["🏭 LLMProviderFactory\n(NIM / Ollama)"]
     end
 
     subgraph Inferencia ["Capa de Inferencia (LLM)"]
         direction TB
-        NIM["NVIDIA NIM Cloud API\n(integrate.api.nvidia.com)"]
-        OLLAMA["Ollama Runtime Local\n(localhost:11434)"]
+        NIM["☁️ NVIDIA NIM Cloud API\n(integrate.api.nvidia.com)"]
+        OLLAMA["💻 Ollama Local Runtime\n(llama3-groq-tool-use:8b)"]
     end
 
-    subgraph ProtocoloMCP ["Capa de Interoperabilidad (Model Context Protocol)"]
+    subgraph ProtocoloMCP ["Capa de Protocolo y Contratos (MCP)"]
         direction TB
-        ClientMCP["Cliente MCP"]
-        ServerMCP["Servidor MCP Local\n(FastMCP / servidor_mcp.py)"]
-        ToolTrack["Herramienta: track_order"]
+        ClientMCP["🔌 Cliente MCP"]
+        ServerMCP["⚙️ Servidor MCP Local\n(FastMCP / servidor_mcp.py)"]
+        Tool["📦 Herramienta:\ntrack_order(order_id: str)"]
+        DB[("💾 Mock Database:\nPedidos 45231 & 10001")]
     end
 
-    subgraph Enterprise ["Capa Corporativa (Salesforce & MuleSoft)"]
+    subgraph Enterprise ["Capa Corporativa Futura (Salesforce & MuleSoft)"]
         direction TB
-        Mule["MuleSoft API Gateway & Governance"]
-        AF["Salesforce Agentforce / CRM Core"]
-        OMS[("ERP / OMS / Logística")]
+        Mule["🛡️ MuleSoft API Gateway\n(Gobernanza & OAuth)"]
+        AF["☁️ Salesforce Agentforce\n(Agente Autónomo)"]
+        OMS[("🏢 ERP / Logística / Transportistas")]
     end
 
-    U --> A
+    U <--> A
     A --> AL
-    A --> L
-    A <--"OpenAI API Compatible"--> NIM
-    A <--"OpenAI API Compatible"--> OLLAMA
+    A --> LOOP
+    A --> FACTORY
+    FACTORY <--"OpenAI API Compatible"--> NIM
+    FACTORY <--"OpenAI API Compatible"--> OLLAMA
     A --> ClientMCP
-    ClientMCP <--"JSON-RPC 2.0 (Stdio / SSE)"--> ServerMCP
-    ServerMCP --> ToolTrack
-    ToolTrack -.-> Mule
+    ClientMCP <--"JSON-RPC 2.0 (Stdio / In-Process)"--> ServerMCP
+    ServerMCP --> Tool
+    Tool <--> DB
+    Tool -.-> Mule
     Mule -.-> AF
     Mule -.-> OMS
+
+    style Usuario fill:#f8fafc,stroke:#64748b,stroke-width:2px
+    style Agente fill:#eff6ff,stroke:#2563eb,stroke-width:2px
+    style Inferencia fill:#f0fdf4,stroke:#16a34a,stroke-width:2px
+    style ProtocoloMCP fill:#faf5ff,stroke:#9333ea,stroke-width:2px
+    style Enterprise fill:#fffbeb,stroke:#d97706,stroke-width:2px
+
+    style U fill:#ffffff,stroke:#64748b,stroke-width:1px
+    style A fill:#ede9fe,stroke:#7c3aed,stroke-width:2px
+    style AL fill:#ede9fe,stroke:#7c3aed,stroke-width:1px
+    style LOOP fill:#ede9fe,stroke:#7c3aed,stroke-width:1px
+    style FACTORY fill:#ede9fe,stroke:#7c3aed,stroke-width:1px
+    style NIM fill:#ffffff,stroke:#16a34a,stroke-width:1px
+    style OLLAMA fill:#ffffff,stroke:#16a34a,stroke-width:1px
+    style ClientMCP fill:#f5f3ff,stroke:#8b5cf6,stroke-width:1px
+    style ServerMCP fill:#f5f3ff,stroke:#8b5cf6,stroke-width:1px
+    style Tool fill:#f5f3ff,stroke:#8b5cf6,stroke-width:1px
+    style DB fill:#f5f3ff,stroke:#8b5cf6,stroke-width:2px
+    style Mule fill:#ffffff,stroke:#d97706,stroke-width:1px
+    style AF fill:#ffffff,stroke:#d97706,stroke-width:1px
+    style OMS fill:#ffffff,stroke:#d97706,stroke-width:1px
 ```
 
 ---
