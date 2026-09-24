@@ -20,15 +20,15 @@ La sesión en video valida de forma práctica el 100% de los criterios de la rú
 
 ---
 
-## ⏱️ 2. Índice de Navegación y Marcas de Tiempo (Timestamps)
+## 🧭 2. Índice de Navegación y Módulos de la Demostración
 
-| Tiempo | Sección / Módulo | Descripción Técnica de la Prueba |
-| :--- | :--- | :--- |
-| **00:00 - 00:35** | **Control de Infraestructura** | Configuración de arquitectura Zero-Trust, selección de proveedor (NVIDIA NIM vs. Ollama Local) y parametrización de hiperparámetros (temperatura y límite de tokens). |
-| **00:35 - 01:20** | **Playground Agéntico & FastMCP** | Carga dinámica de consulta rápida del Pedido 45231, llamada a la herramienta `consultar_estado_envio` e inspección del retorno JSON del servidor FastMCP. |
-| **01:20 - 02:05** | **Prueba de Fuego: MCP Caído** | Activación del toggle de *Chaos Engineering*. FastMCP simula error 503 y el LLM responde informando la falla técnica de rastreo sin fabricar datos de entrega (cumplimiento estricto de rúbrica). |
-| **02:05 - 02:35** | **Suite de Pruebas Pytest (6/6 PASS)** | Ejecución de la batería de pruebas de integración y contratos unitarios (`test_suite_automatizada.py`) en el entorno virtual. |
-| **02:35 - Fin** | **Salesforce Org Verification** | Ejecución de `sf org list --json` formateada en tabla ejecutiva uniforme, validando la conexión de la Org por defecto `AgentforceBootcamp`. |
+| Sección / Módulo | Descripción Técnica de la Prueba |
+| :--- | :--- |
+| **Control de Infraestructura** | Configuración de arquitectura Zero-Trust, selección de proveedor (NVIDIA NIM vs. Ollama Local) y parametrización de hiperparámetros (temperatura y límite de tokens). |
+| **Playground Agéntico & FastMCP** | Carga dinámica de consulta rápida del Pedido 45231, llamada a la herramienta `consultar_estado_envio` e inspección del retorno JSON del servidor FastMCP. |
+| **Prueba de Fuego: MCP Caído** | Activación del toggle de *Chaos Engineering*. FastMCP simula error 503 y el LLM responde informando la falla técnica de rastreo sin fabricar datos de entrega (cumplimiento estricto de rúbrica). |
+| **Suite de Pruebas Pytest (6/6 PASS)** | Ejecución de la batería de pruebas de integración y contratos unitarios (`test_suite_automatizada.py`) en el entorno virtual. |
+| **Salesforce Org Verification** | Ejecución de `sf org list --json` formateada en tabla ejecutiva uniforme, validando la conexión de la Org por defecto `AgentforceBootcamp`. |
 
 ---
 
@@ -38,8 +38,8 @@ La sesión en video valida de forma práctica el 100% de los criterios de la rú
 * **Framework Interactivo:** Streamlit 1.64.
 * **Orquestación Agéntica:** Protocolo MCP oficial (`mcp`), SDK OpenAI (`openai`), Pydantic y HTTPX.
 * **Proveedores de Inferencia:**
-  * Cloud: NVIDIA NIM API (`nvidia/nemotron-3-ultra-550b-a55b` y `meta/llama-3.1-70b-instruct`).
-  * Local: Ollama Runtime (`qwen2.5:1.5b` y `llama3-groq-tool-use:8b`).
+  * Cloud: NVIDIA NIM API (`nvidia/nemotron-3-ultra-550b-a55b`).
+  * Local: Ollama Runtime (`llama3-groq-tool-use:8b`).
 * **CRM & Enterprise:** Salesforce CLI (`sf`), con organización conectada `AgentforceBootcamp`.
 * **Testing:** Pytest 9.0 con mocks deterministas y pruebas de integración asíncrona.
 
