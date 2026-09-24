@@ -214,12 +214,12 @@ Edita `.env` con tu configuración (`LLM_PROVIDER=ollama` para pruebas locales o
 
 ---
 
-## 8. Evidencias de Evaluación (Rúbrica SKALA - Secciones 15 y 16)
+## 8. Evidencias de Ejecución y Validación Técnica
 
-A continuación se presentan las evidencias de ejecución de cada criterio técnico solicitado en la rúbrica oficial de evaluación:
+A continuación se presentan las pruebas de ejecución y validación técnica del sistema:
 
 ### 📸 Evidencia 1: Diagnóstico de Entorno y Dependencias
-* **Criterio (Punto 2):** Versión de Python (3.14.5) y entorno virtual activo (`.venv`) con dependencias instaladas y `.env` detectado.
+* **Validación:** Versión de Python (3.14.5) y entorno virtual activo (`.venv`) con dependencias instaladas y `.env` detectado.
 * **Comando:** `python verificar_entorno.py`
 
 ![Evidencia 1: Diagnóstico de Entorno](docs/img/evidencia_01_entorno_virtual.png)
@@ -227,7 +227,7 @@ A continuación se presentan las evidencias de ejecución de cada criterio técn
 ---
 
 ### 📸 Evidencia 2: Inferencia Directa con NVIDIA NIM (Cloud 200 OK)
-* **Criterio (Punto 3):** Conectividad con la API de NVIDIA NIM (`https://integrate.api.nvidia.com/v1`), modelo `nvidia/nemotron-3-ultra-550b-a55b`, API Key protegida y respuesta `200 OK`.
+* **Validación:** Conectividad con la API de NVIDIA NIM (`https://integrate.api.nvidia.com/v1`), modelo `nvidia/nemotron-3-ultra-550b-a55b`, API Key protegida y respuesta `200 OK`.
 * **Comando:** `python probar_nim.py`
 
 ![Evidencia 2: Inferencia Directa NIM](docs/img/evidencia_02_nim_directo_200ok.png)
@@ -235,7 +235,7 @@ A continuación se presentan las evidencias de ejecución de cada criterio técn
 ---
 
 ### 📸 Evidencia 3: Descubrimiento de Herramientas FastMCP (`list_tools`)
-* **Criterio (Punto 4):** Servidor FastMCP publicando la herramienta `track_order` con su docstring explicativo y esquema `inputSchema` obligatorio.
+* **Validación:** Servidor FastMCP publicando la herramienta `track_order` con su docstring explicativo y esquema `inputSchema` obligatorio.
 * **Comando:** `python test_servidor_mcp.py`
 
 ![Evidencia 3: Descubrimiento MCP](docs/img/evidencia_03_mcp_list_tools.png)
@@ -243,7 +243,7 @@ A continuación se presentan las evidencias de ejecución de cada criterio técn
 ---
 
 ### 📸 Evidencia 4: Ciclo Completo del Agente con Tool Calling en NVIDIA NIM
-* **Criterio (Punto 5):** Detección de la llamada a la herramienta, ejecución en el servidor MCP y síntesis final estructurada en lenguaje natural para el pedido `45231`.
+* **Validación:** Detección de la llamada a la herramienta, ejecución en el servidor MCP y síntesis final estructurada en lenguaje natural para el pedido `45231`.
 * **Comando:** `python agente_nim_mcp.py` *(con `LLM_PROVIDER=nvidia`)*
 
 ![Evidencia 4: Tool Calling con NVIDIA NIM](docs/img/evidencia_04_agente_tool_call_nim.png)
@@ -251,7 +251,7 @@ A continuación se presentan las evidencias de ejecución de cada criterio técn
 ---
 
 ### 📸 Evidencia 5: Batería de Pruebas Automatizadas con Pytest
-* **Criterio (Punto 6):** 6/6 pruebas unitarias y de integración pasando en verde (`PASSED`), validando contratos de MCP, allowlist y resistencia a alucinaciones.
+* **Validación:** 6/6 pruebas unitarias y de integración pasando en verde (`PASSED`), validando contratos de MCP, allowlist y resistencia a alucinaciones.
 * **Comando:** `pytest -v test_suite_automatizada.py`
 
 ![Evidencia 5: Pruebas Automatizadas](docs/img/evidencia_05_pruebas_automatizadas_pytest.png)
@@ -259,23 +259,23 @@ A continuación se presentan las evidencias de ejecución de cada criterio técn
 ---
 
 ### 📸 Evidencia 6: Inferencia Híbrida y Comparativa Local con Ollama
-* **Criterio (Diapositiva 15):** Demostración del mismo agente y servidor MCP conmutando a ejecución local offline a costo $0 con Ollama.
+* **Validación:** Demostración del mismo agente y servidor MCP conmutando a ejecución local offline a costo $0 con Ollama.
 * **Comando:** `python agente_nim_mcp.py` *(con `LLM_PROVIDER=ollama`)*
 
 ![Evidencia 6: Agente con Ollama Local](docs/img/evidencia_06_agente_ollama_local.png)
 
 ---
 
-### 📸 Evidencia Extra A: Validación de Descarga del Modelo Local (Ollama)
-* **Criterio:** Verificación del modelo `llama3-groq-tool-use:8b` (4.9 GB) descargado y listo para ejecución híbrida (GPU + RAM) en la máquina.
+### 📸 Evidencia 7: Validación de Descarga del Modelo Local (Ollama)
+* **Validación:** Verificación del modelo `llama3-groq-tool-use:8b` (4.9 GB) descargado y listo para ejecución híbrida (GPU + RAM) en la máquina.
 * **Comando:** `ollama list`
 
 ![Evidencia Extra: Modelo Local Descargado](docs/img/OllamaLlama3Model00.png)
 
 ---
 
-### 📸 Evidencia Extra B: Organización de Salesforce Conectada en Antigravity IDE
-* **Criterio (Lista de Comprobación):** Organización `AgentforceBootcamp` autenticada con status `Connected` y marcada como default (`🍁`).
+### 📸 Evidencia 8: Organización de Salesforce Conectada en Antigravity IDE
+* **Validación:** Organización `AgentforceBootcamp` autenticada con status `Connected` y marcada como default (`🍁`).
 * **Comando:** `sf org list`
 
 ![Evidencia Extra: Salesforce Org Conectada](docs/img/evidencia_07_salesforce_org_connected.png)
