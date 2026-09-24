@@ -274,7 +274,7 @@ A continuación se presentan las pruebas de ejecución y validación técnica de
 
 ---
 
-### 📸 Evidencia 8: Organización de Salesforce Conectada en Antigravity IDE
+### 📸 Evidencia 8: Organización de Salesforce Conectada (Interop WSL2 / Ubuntu)
 * **Validación:** Organización `AgentforceBootcamp` autenticada con status `Connected` y marcada como default (`🍁`).
 * **Comando:** `sf org list`
 
