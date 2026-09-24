@@ -282,4 +282,13 @@ A continuación se presentan las pruebas de ejecución y validación técnica de
 
 ---
 
+### 🎥 Evidencia 9: SKALA Agentic Developer Workbench & Demostración en Video
+* **Validación:** Demostración interactiva en video de la plataforma para desarrolladores (`app_workbench.py`). Valida en vivo la conmutación entre NVIDIA NIM Cloud y Ollama Local, pruebas rápidas de pedidos, inspección de payload JSON en FastMCP, la prueba oficial de rúbrica de **Ingeniería del Caos (servidor MCP caído con respuesta transparente sin alucinación)**, ejecución de Pytest (6/6 PASS) y la verificación estructurada de Salesforce Org.
+* **Ficha Técnica Detallada:** [Consultar FICHA_TECNICA_DEMO_WORKBENCH.md](FICHA_TECNICA_DEMO_WORKBENCH.md)
+* **Video Demostrativo en YouTube (Oculto):** 🔗 [Ver Demostración en YouTube (vZjdnarJyvs)](https://youtu.be/vZjdnarJyvs)
+
+![Evidencia 9: Demostración en Video del Developer Workbench](docs/img/evidencia_09_workbench_thumbnail.jpg)
+
+---
+
 Desarrollado con rigor de ingeniería por **Emmanuel Sánchez**.

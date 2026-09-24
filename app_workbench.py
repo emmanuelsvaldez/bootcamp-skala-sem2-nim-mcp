@@ -18,6 +18,7 @@ from pathlib import Path
 from typing import Dict, Any, List, Optional, Tuple
 
 import streamlit as st
+import pandas as pd
 import httpx
 from dotenv import load_dotenv
 import openai
@@ -61,22 +62,6 @@ st.markdown("""
     }
     .stCodeBlock {
         border-radius: 8px;
-    }
-    .badge-cloud {
-        background-color: #1e3a8a;
-        color: #93c5fd;
-        padding: 3px 8px;
-        border-radius: 6px;
-        font-size: 0.85rem;
-        font-weight: 600;
-    }
-    .badge-local {
-        background-color: #064e3b;
-        color: #6ee7b7;
-        padding: 3px 8px;
-        border-radius: 6px;
-        font-size: 0.85rem;
-        font-weight: 600;
     }
 </style>
 """, unsafe_allow_html=True)
@@ -128,14 +113,15 @@ MODELOS_NIM_CONOCIDOS = [
 
 
 # ==============================================================================
-# MOTOR DEL AGENTE INTERACTIVO
+# MOTOR DEL AGENTE INTERACTIVO CON INYECCIÓN DE CAOS (MCP CAÍDO)
 # ==============================================================================
 class AgenteWorkbenchEngine:
-    def __init__(self, proveedor: str, modelo: str, temperature: float, max_tokens: int):
+    def __init__(self, proveedor: str, modelo: str, temperature: float, max_tokens: int, simular_mcp_caido: bool = False):
         self.proveedor = proveedor
         self.modelo = modelo
         self.temperature = temperature
         self.max_tokens = max_tokens
+        self.simular_mcp_caido = simular_mcp_caido
 
         if proveedor == "ollama":
             self.base_url = os.getenv("OLLAMA_BASE_URL", "http://127.0.0.1:11434/v1")
@@ -178,7 +164,8 @@ class AgenteWorkbenchEngine:
                     "1. Siempre que el usuario pregunte por el estado de un pedido y proporcione un número o ID (ej. 45231, 99999), DEBES llamar obligatoriamente a la herramienta 'track_order'.\n"
                     "2. Si el usuario NO proporciona un número de pedido, pídeselo cordialmente en español SIN llamar a ninguna herramienta.\n"
                     "3. Cuando la herramienta indique que el pedido no fue encontrado, informa al usuario con la verdad; NUNCA inventes información.\n"
-                    "4. Responde siempre en español de manera profesional, clara y concisa."
+                    "4. Si la herramienta reporta que el servidor MCP falló, está caído o no responde, informa al usuario con total transparencia que el sistema de rastreo se encuentra fuera de línea temporalmente; NUNCA inventes transportistas ni fechas.\n"
+                    "5. Responde siempre en español de manera profesional, clara y concisa."
                 )
             },
             {"role": "user", "content": prompt_usuario}
@@ -215,8 +202,15 @@ class AgenteWorkbenchEngine:
                     except Exception:
                         args = {}
 
-                    # Ejecución protegida en FastMCP
-                    if func_name == "track_order":
+                    # 1. Simulación de Falla Inyectada (Caso: MCP Caído de la Rúbrica)
+                    if self.simular_mcp_caido:
+                        res_texto = json.dumps({
+                            "error": "FalloConexionFastMCP",
+                            "codigo": 503,
+                            "mensaje": "CRÍTICO: No se pudo conectar al servidor FastMCP. Conexión rechazada (Servidor caído / Timeout)."
+                        }, ensure_ascii=False)
+                    # 2. Ejecución Normal en FastMCP
+                    elif func_name == "track_order":
                         mcp_res = await mcp.call_tool(func_name, args)
                         res_texto = ""
                         if hasattr(mcp_res, "content") and mcp_res.content:
@@ -228,7 +222,7 @@ class AgenteWorkbenchEngine:
                         else:
                             res_texto = str(mcp_res)
                     else:
-                        res_texto = json.dumps({"error": "ToolNoAutorizada", "mensaje": "Herramienta fuera de Allowlist"})
+                        res_texto = json.dumps({"error": "ToolNoAutorizada", "mensaje": "Herramienta fuera de Allowlist"}, ensure_ascii=False)
 
                     iter_trace["tool_calls"].append({
                         "id": tc.id,
@@ -307,18 +301,27 @@ with st.sidebar:
     temperatura = st.slider("Temperature:", min_value=0.0, max_value=1.0, value=0.1, step=0.05)
     max_tokens = st.slider("Max Tokens:", min_value=50, max_value=500, value=250, step=25)
 
-    # 4. Estado de Salud FastMCP
+    # 4. Estado de Salud FastMCP & Emulación de Caída (Rúbrica SKALA)
     st.markdown("---")
     st.markdown("### 🔌 Estado del Servidor MCP")
-    try:
-        tools = run_async_safe(mcp.list_tools(), timeout=3)
-        st.success(f"🟢 FastMCP Activo ({len(tools)} herramienta)")
-        with st.expander("Ver herramientas registradas"):
-            for t in tools:
-                st.write(f"• **`{t.name}`**")
-                st.caption(t.description)
-    except Exception as e:
-        st.error(f"🔴 FastMCP No Disponible: {e}")
+    simular_caida = st.toggle(
+        "💥 Simular Servidor MCP Caído",
+        value=False,
+        help="Emula una falla del servidor FastMCP (prueba oficial de rúbrica) para verificar que el agente maneje el error sin inventar información."
+    )
+
+    if simular_caida:
+        st.error("🔴 MODO CAOS ACTIVO: Servidor FastMCP simulado como inaccesible / fuera de línea.")
+    else:
+        try:
+            tools = run_async_safe(mcp.list_tools(), timeout=3)
+            st.success(f"🟢 FastMCP Activo ({len(tools)} herramienta)")
+            with st.expander("Ver herramientas registradas"):
+                for t in tools:
+                    st.write(f"• **`{t.name}`**")
+                    st.caption(t.description)
+        except Exception as e:
+            st.error(f"🔴 FastMCP No Disponible: {e}")
 
     # 5. Badges de Seguridad Zero-Trust
     st.markdown("---")
@@ -349,25 +352,26 @@ with tab_playground:
     st.markdown("### 🧪 Laboratorio de Consultas Agénticas")
     st.write("Prueba cómo el agente procesa lenguaje natural, decide invocar FastMCP y sintetiza respuestas.")
 
-    # Botones de prueba rápida preconfigurados
-    st.markdown("**Consultas de Prueba Rápida:**")
+    # Inicializar prompt en estado de sesión para permitir actualización por clic
+    if "user_prompt" not in st.session_state:
+        st.session_state["user_prompt"] = "Hola, ¿podrías informarme cuál es el estado de mi pedido 45231?"
+
+    def cargar_prompt(texto_sugerido: str):
+        st.session_state["user_prompt"] = texto_sugerido
+
+    # Botones de prueba rápida interactivos
+    st.markdown("**Consultas de Prueba Rápida (Haz clic para cargar en el cuadro de texto):**")
     col1, col2, col3, col4 = st.columns(4)
 
-    prompt_sugerido = ""
-    if col1.button("📦 Pedido 45231 (En tránsito)"):
-        prompt_sugerido = "Hola, ¿podrías informarme cuál es el estado de mi pedido 45231?"
-    if col2.button("🚚 Pedido 10001 (Entregado)"):
-        prompt_sugerido = "Por favor revisa el estatus de entrega del pedido 10001."
-    if col3.button("❓ Pregunta sin ID"):
-        prompt_sugerido = "Hola, quiero saber cuándo llega mi paquete que pedí la semana pasada."
-    if col4.button("❌ Pedido Inexistente (99999)"):
-        prompt_sugerido = "Por favor revisa el estatus del pedido 99999."
+    col1.button("📦 Pedido 45231 (En tránsito)", on_click=cargar_prompt, args=("Hola, ¿podrías informarme cuál es el estado de mi pedido 45231?",))
+    col2.button("🚚 Pedido 10001 (Entregado)", on_click=cargar_prompt, args=("Por favor revisa el estatus de entrega del pedido 10001.",))
+    col3.button("❓ Pregunta sin ID", on_click=cargar_prompt, args=("Hola, quiero saber cuándo llega mi paquete que pedí la semana pasada.",))
+    col4.button("❌ Pedido Inexistente (99999)", on_click=cargar_prompt, args=("Por favor revisa el estatus del pedido 99999.",))
 
-    # Campo de entrada
+    # Campo de entrada enlazado bidireccionalmente con session_state
     prompt_usuario = st.text_input(
-        "Ingresa la consulta para el agente:",
-        value=prompt_sugerido if prompt_sugerido else "Hola, ¿podrías informarme cuál es el estado de mi pedido 45231?",
-        key="input_prompt"
+        "Ingresa o edita la consulta para el agente:",
+        key="user_prompt"
     )
 
     btn_ejecutar = st.button("🚀 Ejecutar Ciclo Agéntico", type="primary")
@@ -379,7 +383,8 @@ with tab_playground:
                     proveedor=proveedor_id,
                     modelo=modelo_elegido,
                     temperature=temperatura,
-                    max_tokens=max_tokens
+                    max_tokens=max_tokens,
+                    simular_mcp_caido=simular_caida
                 )
                 resultado = run_async_safe(engine.ejecutar_consulta(prompt_usuario.strip()), timeout=50)
 
@@ -393,7 +398,10 @@ with tab_playground:
 
                 # 2. Respuesta Final del Agente
                 st.markdown("#### 🤖 Respuesta del Agente:")
-                st.info(resultado["respuesta"])
+                if simular_caida:
+                    st.warning(resultado["respuesta"])
+                else:
+                    st.info(resultado["respuesta"])
 
                 # 3. Trazabilidad del Protocolo MCP
                 st.markdown("#### 🔍 Trazabilidad del Ciclo MCP (Auditoría de Ejecución):")
@@ -402,13 +410,14 @@ with tab_playground:
                     if t["tool_calls"]:
                         hubo_tools = True
                         for tc in t["tool_calls"]:
-                            with st.expander(f"🛠️ [MCP Tool Call] {tc['herramienta']}", expanded=True):
+                            badge_color = "🔴" if simular_caida else "🛠️"
+                            with st.expander(f"{badge_color} [MCP Tool Call] {tc['herramienta']}", expanded=True):
                                 c_arg, c_ret = st.columns(2)
                                 with c_arg:
                                     st.markdown("**Argumentos JSON generados por el LLM:**")
                                     st.json(tc["argumentos"])
                                 with c_ret:
-                                    st.markdown("**Respuesta cruda del Servidor MCP:**")
+                                    st.markdown("**Respuesta recibida del Servidor MCP:**")
                                     try:
                                         st.json(json.loads(tc["retorno_mcp"]))
                                     except Exception:
@@ -475,10 +484,20 @@ with tab_diagnostico:
 
     col_btn1, col_btn2, col_btn3 = st.columns(3)
 
+    subproc_env = {**os.environ, "PYTHONIOENCODING": "utf-8"}
+
     if col_btn1.button("▶️ Ejecutar Pytest Suite (6 Tests)", type="secondary"):
         with st.spinner("Ejecutando pytest en el entorno virtual..."):
             cmd = [sys.executable, "-m", "pytest", "-v", "test_suite_automatizada.py"]
-            res = subprocess.run(cmd, capture_output=True, text=True, cwd=str(Path(".")))
+            res = subprocess.run(
+                cmd,
+                capture_output=True,
+                text=True,
+                encoding="utf-8",
+                errors="replace",
+                env=subproc_env,
+                cwd=str(Path("."))
+            )
             if res.returncode == 0:
                 st.success("✅ 6/6 Pruebas de Integración Aprobadas (PASS)")
             else:
@@ -488,14 +507,85 @@ with tab_diagnostico:
     if col_btn2.button("🩺 Diagnóstico de Entorno", type="secondary"):
         with st.spinner("Verificando librerías y configuración de seguridad..."):
             cmd = [sys.executable, "verificar_entorno.py"]
-            res = subprocess.run(cmd, capture_output=True, text=True, cwd=str(Path(".")))
+            res = subprocess.run(
+                cmd,
+                capture_output=True,
+                text=True,
+                encoding="utf-8",
+                errors="replace",
+                env=subproc_env,
+                cwd=str(Path("."))
+            )
             st.code(res.stdout, language="text")
 
     if col_btn3.button("🍁 Verificar Salesforce Org", type="secondary"):
-        with st.spinner("Consultando estado de organización con Salesforce CLI..."):
+        with st.spinner("Consultando estado de organizaciones con Salesforce CLI..."):
             try:
-                cmd = ["powershell.exe", "-NoProfile", "-Command", "sf org list"]
-                res = subprocess.run(cmd, capture_output=True, text=True, cwd=str(Path(".")))
-                st.code(res.stdout if res.stdout else res.stderr, language="text")
+                cmd = ["powershell.exe", "-NoProfile", "-Command", "sf org list --json"]
+                res = subprocess.run(
+                    cmd,
+                    capture_output=True,
+                    text=True,
+                    encoding="utf-8",
+                    errors="replace",
+                    cwd=str(Path("."))
+                )
+                if res.stdout:
+                    try:
+                        data = json.loads(res.stdout)
+                        orgs_raw = data.get("result", {}).get("nonScratchOrgs", [])
+                        if orgs_raw:
+                            filas = []
+                            org_activa_alias = None
+                            devhub_alias = None
+                            total_conectadas = 0
+
+                            for o in orgs_raw:
+                                is_default = o.get("isDefaultUsername", False)
+                                is_hub = o.get("isDefaultDevHubUsername", False) or o.get("isDevHub", False)
+                                
+                                roles = []
+                                if is_default:
+                                    roles.append("🍁 Org Activa")
+                                    org_activa_alias = o.get("alias") or o.get("username")
+                                if is_hub:
+                                    roles.append("🌲 DevHub")
+                                    devhub_alias = o.get("alias") or o.get("username")
+                                
+                                rol_str = " & ".join(roles) if roles else "Org Conectada"
+
+                                status = o.get("connectedStatus", "Desconocido")
+                                is_conn = status.lower() == "connected"
+                                if is_conn:
+                                    total_conectadas += 1
+                                status_badge = f"🟢 {status}" if is_conn else f"⚠️ {status}"
+
+                                filas.append({
+                                    "Rol": rol_str,
+                                    "Alias": o.get("alias") or "—",
+                                    "Estado": status_badge,
+                                    "Username": o.get("username", "—"),
+                                    "Org ID": o.get("orgId", "—"),
+                                    "Instancia": o.get("instanceName") or o.get("instanceUrl", "—")
+                                })
+
+                            # Métricas resumen de alto nivel
+                            m1, m2, m3 = st.columns(3)
+                            m1.metric("Orgs Conectadas", f"{total_conectadas}/{len(orgs_raw)}")
+                            m2.metric("Org Activa (Default)", org_activa_alias or "No asignada")
+                            m3.metric("DevHub Activo", devhub_alias or "No asignado")
+
+                            # DataFrame interactivo, ordenado y visualmente uniforme
+                            df = pd.DataFrame(filas)
+                            st.dataframe(df, use_container_width=True, hide_index=True)
+
+                            with st.expander("📄 Ver salida JSON técnica de Salesforce CLI"):
+                                st.json(data)
+                        else:
+                            st.warning("No se encontraron organizaciones registradas en Salesforce CLI.")
+                    except json.JSONDecodeError:
+                        st.code(res.stdout, language="text")
+                else:
+                    st.code(res.stderr, language="text")
             except Exception as e:
                 st.error(f"Error consultando sf org list: {e}")
