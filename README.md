@@ -267,7 +267,7 @@ A continuación se presentan las pruebas de ejecución y validación técnica de
 ---
 
 ### 📸 Evidencia 7: Validación de Descarga del Modelo Local (Ollama)
-* **Validación:** Verificación del modelo `llama3-groq-tool-use:8b` (4.9 GB) descargado y listo para ejecución híbrida (GPU + RAM) en la máquina.
+* **Validación:** Verificación del modelo `llama3-groq-tool-use:8b` (4.7 GB) descargado y listo para ejecución híbrida (GPU + RAM) en la máquina.
 * **Comando:** `ollama list`
 
 ![Evidencia Extra: Modelo Local Descargado](docs/img/OllamaLlama3Model00.png)
