@@ -1,0 +1,45 @@
+# ==========================================
+# Enterprise .gitignore
+# Proyecto: Bootcamp Semana 2 - NIM, Ollama, MCP & Salesforce
+# Desarrollado por: Emmanuel Sánchez
+# ==========================================
+
+# Secretos y Entornos Locales (CRÍTICO: Nunca comitear credenciales)
+.env
+.env.local
+.env.*.local
+*.key
+*.pem
+
+# Metadatos Locales y Sesiones de Salesforce CLI
+.sf/
+.sfdx/
+
+# Entornos Virtuales de Python
+.venv/
+venv/
+ENV/
+env/
+env.bak/
+venv.bak/
+
+# Bytecode y Caché de Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Logs y Diagnósticos
+*.log
+logs/
+
+# IDEs y Editores
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store

@@ -1,0 +1,27 @@
+# ==========================================
+# Dependencias Enterprise del Proyecto
+# Proyecto: Bootcamp Semana 2 - NVIDIA NIM, Ollama, MCP & Salesforce
+# Desarrollado por: Emmanuel Sánchez
+# ==========================================
+
+# Cliente compatible para inferencia con NVIDIA NIM y Ollama
+openai>=1.30.0
+
+# Gestión segura de variables de entorno y configuración
+python-dotenv>=1.0.0
+
+# SDK oficial de Model Context Protocol (incluye FastMCP)
+mcp>=1.3.0
+
+# Cliente HTTP robusto con soporte asíncrono y timeouts
+httpx>=0.27.0
+
+# Validación estricta de contratos de datos y esquemas
+pydantic>=2.7.0
+
+# Telemetría, trazabilidad visual y logs en consola de nivel enterprise
+rich>=13.7.0
+
+# Framework de pruebas automatizadas
+pytest>=8.0.0
+pytest-asyncio>=0.23.0
