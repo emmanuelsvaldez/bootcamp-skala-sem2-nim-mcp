@@ -155,17 +155,21 @@ flowchart TD
 ```text
 D:\bootcampSem2\
 ├── docs/
-│   └── img/                    # Evidencias fotográficas de ejecución (Rúbrica)
-├── .env.example                # Plantilla de variables de entorno (sin credenciales)
-├── .gitignore                  # Protección estricta de secretos y entornos
-├── requirements.txt            # Dependencias fijadas y auditadas
-├── README.md                   # Documentación general y arquitectura
-├── verificar_entorno.py        # Script de diagnóstico y verificación inicial
-├── probar_nim.py               # Validación aislada de inferencia contra NVIDIA NIM
-├── servidor_mcp.py             # Servidor MCP con herramienta 'track_order'
-├── test_servidor_mcp.py        # Pruebas unitarias de descubrimiento e invocación MCP
-├── agente_nim_mcp.py           # Agente orquestador con soporte NIM / Ollama y MCP
-└── test_suite_automatizada.py  # Suite de pruebas automatizadas con pytest
+│   └── img/                            # Evidencias fotográficas y miniatura de ejecución
+├── .env.example                        # Plantilla de variables de entorno (sin credenciales)
+├── .gitignore                          # Protección estricta de secretos y entornos
+├── requirements.txt                    # Dependencias fijadas y auditadas (incluye Streamlit)
+├── README.md                           # Documentación general y arquitectura
+├── FICHA_TECNICA_DEMO_WORKBENCH.md     # Ficha técnica y guía del video demostrativo
+├── app_workbench.py                    # Developer Workbench interactivo (Capa de Experiencia Streamlit)
+├── verificar_entorno.py                # Script de diagnóstico y verificación inicial
+├── probar_nim.py                       # Validación aislada de inferencia contra NVIDIA NIM
+├── listar_modelos_nim.py               # Explorador de catálogo de modelos en NVIDIA NIM
+├── diagnostico_hardware_llm.py         # Diagnóstico de VRAM y telemetría de hardware
+├── servidor_mcp.py                     # Servidor FastMCP con herramienta 'track_order'
+├── test_servidor_mcp.py                # Pruebas unitarias de descubrimiento e invocación MCP
+├── agente_nim_mcp.py                   # Agente orquestador desacoplado (NIM / Ollama / MCP)
+└── test_suite_automatizada.py          # Batería de pruebas automatizadas con pytest (6/6 PASS)
 ```
 
 ---
