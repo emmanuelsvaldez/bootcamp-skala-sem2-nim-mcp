@@ -25,3 +25,7 @@ rich>=13.7.0
 # Framework de pruebas automatizadas
 pytest>=8.0.0
 pytest-asyncio>=0.23.0
+
+# Interfaz gráfica interactiva y Developer Workbench
+streamlit>=1.30.0
+
