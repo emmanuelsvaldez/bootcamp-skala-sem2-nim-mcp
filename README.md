@@ -88,7 +88,15 @@ flowchart TD
 
 ---
 
-## 4. Diagrama de Arquitectura de la Solución
+## 4. Arquitectura de la Solución: Evolución en Dos Fases
+
+Para dar visibilidad al proceso de ingeniería y permitir a evaluadores técnicos apreciar la madurez del diseño, la arquitectura se documenta en su **Línea Base Inicial (Pre-Claude)** y su **Arquitectura Evolucionada (Posterior con Claude Bridge)**:
+
+---
+
+### 4.1 Fase 1: Arquitectura Base Pre-Claude (NVIDIA NIM + Ollama + FastMCP)
+
+La arquitectura inicial resolvió el desacoplamiento entre cómputo en la nube empresarial (**NVIDIA NIM**) y desarrollo offline a costo $0 (**Ollama Local**) mediante el patrón Factory/Adapter y las 4 capas de seguridad perimetral y transaccional:
 
 ```mermaid
 flowchart TD
@@ -187,6 +195,103 @@ flowchart TD
 
 ---
 
+### 4.2 Fase 2: Arquitectura Evolucionada Posterior (Tríada Híbrida con Claude Bridge)
+
+En esta fase se incorporó un tercer vector de inferencia: **Anthropic Claude 3.7 Sonnet**, integrando el protocolo de bloques de Anthropic Messages API y resolviendo la gobernanza en caliente desde el Workbench:
+
+```mermaid
+flowchart TD
+    subgraph UI ["🖥️ Capa de Experiencia & Auditoría"]
+        WB["⚡ SKALA Developer Workbench (app_workbench.py)\n• Selector Trilateral: NIM | Ollama | Claude Bridge\n• Visor de Bloques Messages API (tool_use / tool_result)\n• Healthcheck en Caliente (Puerto 8000 & 11434)"]
+    end
+
+    subgraph Seguridad ["🛡️ Perímetro de Gobernanza (4 Capas)"]
+        C1["🛡️ Capa 1: Anti-Injection (0.00s / 0 tokens)"]
+        C2["🔑 Capa 2: Menor Privilegio (RBAC) + Denylist 403"]
+        C3["🤝 Capa 3: Confirmación en 2 Fases (Human-in-the-Loop)"]
+    end
+
+    subgraph Factory ["🏭 LLM Provider Factory (Adapter Pattern)"]
+        FRouter{"Router de Inferencia"}
+    end
+
+    subgraph Motores ["🧠 Tríada de Inferencia Desacoplada"]
+        direction TB
+        NIM["☁️ NVIDIA NIM Cloud API\n(nemotron-3-ultra-550b / llama-70b)"]
+        OLL["💻 Ollama Local Runtime\n(gemma4:e4b 9.6GB - $0 Cost)"]
+        CLD["🧡 Claude CLI Bridge (Local Port 8000)\n(servidor_claude_bridge.py)\n• Zero-Trust / Sesión OS CLI claude.exe\n• Anthropic Messages API Block Protocol"]
+    end
+
+    subgraph Backend ["⚡ Capa 4: FastMCP & Persistencia"]
+        MCP["⚙️ Servidor FastMCP (servidor_mcp.py)\n• track_order (Read) | cancel_order (Write)\n• Idempotencia Transaccional (ALREADY_CANCELLED)"]
+        MOCK[("💾 Mock Database Central")]
+    end
+
+    WB --> C1
+    C1 --> FRouter
+    FRouter -- "Proveedor = 'nvidia'" --> NIM
+    FRouter -- "Proveedor = 'ollama'" --> OLL
+    FRouter -- "Proveedor = 'claude'" --> CLD
+
+    NIM -- "tool_calls" --> C2
+    OLL -- "tool_calls" --> C2
+    CLD -- "tool_use block" --> C2
+
+    C2 --> C3
+    C3 --> MCP
+    MCP <--> MOCK
+    MCP -- "tool_result" --> WB
+
+    style UI fill:#eff6ff,stroke:#2563eb,stroke-width:2px
+    style Seguridad fill:#fef2f2,stroke:#ef4444,stroke-width:2px
+    style Factory fill:#fefce8,stroke:#eab308,stroke-width:2px
+    style Motores fill:#f0fdf4,stroke:#16a34a,stroke-width:2px
+    style Backend fill:#faf5ff,stroke:#9333ea,stroke-width:2px
+    style CLD fill:#fff7ed,stroke:#ea580c,stroke-width:2px
+```
+
+---
+
+### 4.3 Caso de Estudio: Servidor Puente Claude CLI (`servidor_claude_bridge.py`)
+
+#### 🏢 Contexto y Desafío de Ingeniería (El Problema de las Cuentas Comunitarias)
+En entornos académicos, bootcamps y organizaciones corporativas que operan bajo principios de **Zero-Trust**, los desarrolladores frecuentemente reciben acceso a modelos de lenguaje avanzados a través de **cuentas compartidas o licencias empresariales centralizadas**.
+
+* **La Propuesta Inicial (Inviable):** Consumo del endpoint directo de Anthropic (`api.anthropic.com`) usando el SDK oficial (`anthropic.Anthropic()`). Esta vía requería colocar una `ANTHROPIC_API_KEY` maestra en texto plano dentro de un archivo `.env`.
+* **El Riesgo de Seguridad:** Si una clave comunitaria se filtra en un commit de GitHub, se comprometen los créditos, el historial y el acceso de toda la organización. Además, por política de seguridad, las cuentas comunitarias no proveen API keys en texto plano a los usuarios finales.
+* **El Recurso Real Disponible:** El desarrollador contaba únicamente con el cliente de terminal oficial autenticado en el sistema operativo: **`claude.exe` (Claude Code CLI v2.1.229)**.
+
+#### 💡 La Solución de Arquitectura: Servidor Puente ASGI Local (Puerto 8000)
+Se desarrolló un microservicio local basado en **Starlette** y **Uvicorn** (`servidor_claude_bridge.py`) que implementa el **Patrón Adaptador (GoF)**:
+
+```mermaid
+flowchart LR
+    WB["🖥️ SKALA Workbench\n(app_workbench.py)"]
+    Bridge["🌉 Servidor Puente ASGI (Puerto 8000)\n(servidor_claude_bridge.py)"]
+    CLI["💻 Claude Code CLI (v2.1.229)\n(claude.exe en Windows)"]
+    AnthropicCloud["☁️ Nube de Anthropic\n(api.anthropic.com)"]
+
+    WB -- "1. POST /v1/chat/completions\n(JSON OpenAI format)" --> Bridge
+    Bridge -- "2. Subproceso headless\nclaude -p prompt --tools '' --strict-mcp-config" --> CLI
+    CLI -- "3. HTTPS cifrado con Token de Sesión\n(Sin claves en archivos planos)" --> AnthropicCloud
+    AnthropicCloud -- "4. Inferencia: Claude 3.7 Sonnet" --> CLI
+    CLI -- "5. Bloque estructurado tool_use" --> Bridge
+    Bridge -- "6. JSON Response compatible con tool_calls" --> WB
+
+    style WB fill:#eff6ff,stroke:#2563eb,stroke-width:2px
+    style Bridge fill:#fff7ed,stroke:#ea580c,stroke-width:2px
+    style CLI fill:#f1f5f9,stroke:#334155,stroke-width:2px
+    style AnthropicCloud fill:#fdf2f8,stroke:#db2777,stroke-width:2px
+```
+
+#### ⚙️ Optimizaciones Clave de Implementación:
+1. **Aislamiento de Extensiones Nube (`--strict-mcp-config`):** La cuenta comunitaria poseía servidores MCP en la nube (Gmail, Google Drive, Slack, Canva). Al añadir `--strict-mcp-config` y `--tools ""`, se desactivan extensiones de terceros y herramientas CLI locales, forzando a Claude a operar exclusivamente sobre el contrato FastMCP inyectado.
+2. **Eliminación del Delay de Tubería en Windows (`stdin=DEVNULL`):** En Windows, `claude -p` entra en un retardo de 3 segundos esperando entrada por tubería (`no stdin data received in 3s`). Al redirigir `stdin=subprocess.DEVNULL`, la latencia cayó drásticamente de ~6.5 s a **~3.2 s por turno**.
+3. **Alineación con Anthropic Messages API (Slide 8 y 9):** El puente instruye y captura bloques canónicos `tool_use` (`{"type": "tool_use", "name": "...", "input": {...}}`), gobernados por el orquestador (`"Claude propone y el orquestador decide"`) e inyecta la respuesta de FastMCP como bloque `tool_result` para que Claude elabore el bloque final `text` en español natural.
+4. **Protección de Encoding UTF-8:** Envoltura con `io.TextIOWrapper` en `sys.stdout` para prevenir caídas por codec `CP1252` ante emojis de logística generados por el modelo.
+
+---
+
 ## 5. Estructura del Proyecto
 
 ```text
@@ -198,7 +303,9 @@ D:\bootcampSem2\
 ├── requirements.txt                    # Dependencias fijadas y auditadas (incluye Streamlit)
 ├── README.md                           # Documentación general y arquitectura
 ├── FICHA_TECNICA_DEMO_WORKBENCH.md     # Ficha técnica y guía del video demostrativo
-├── app_workbench.py                    # Developer Workbench interactivo (Gobernanza, 7 Escenarios, Inspector MCP)
+├── app_workbench.py                    # Developer Workbench interactivo (Tríada NIM/Ollama/Claude, 7 Escenarios, Inspector MCP)
+├── servidor_claude_bridge.py           # Servidor Puente ASGI local (puerto 8000) hacia Claude Code CLI (Zero-Trust)
+├── test_claude_bridge.py               # Suite de verificación automatizada del puente Claude (sin emojis, portable)
 ├── verificar_entorno.py                # Script de diagnóstico y verificación inicial
 ├── probar_nim.py                       # Validación aislada de inferencia contra NVIDIA NIM
 ├── listar_modelos_nim.py               # Explorador de catálogo de modelos en NVIDIA NIM
