@@ -138,8 +138,9 @@ class AgenteWorkbenchEngine:
             self.base_url = os.getenv("OLLAMA_BASE_URL", "http://127.0.0.1:11434/v1")
             self.api_key = "ollama"
         elif proveedor == "claude":
-            self.base_url = os.getenv("ANTHROPIC_BASE_URL", "https://api.anthropic.com/v1")
-            self.api_key = os.getenv("ANTHROPIC_API_KEY", "claude_key")
+            # Conecta con el Servidor Puente local de Claude en el puerto 8000 (Zero-Trust / Sin API Key)
+            self.base_url = os.getenv("CLAUDE_BRIDGE_URL", "http://127.0.0.1:8000/v1")
+            self.api_key = "claude_bridge"
         else:
             self.base_url = os.getenv("NVIDIA_BASE_URL", "https://integrate.api.nvidia.com/v1")
             self.api_key = os.getenv("NVIDIA_API_KEY", "")
@@ -147,7 +148,7 @@ class AgenteWorkbenchEngine:
         self.cliente = openai.OpenAI(
             base_url=self.base_url,
             api_key=self.api_key,
-            timeout=45.0
+            timeout=75.0
         )
 
     async def ejecutar_consulta(self, prompt_usuario: str) -> Dict[str, Any]:
@@ -343,17 +344,31 @@ class AgenteWorkbenchEngine:
 # ==============================================================================
 with st.sidebar:
     st.markdown("## ⚙️ Control de Infraestructura")
-    st.caption("Arquitectura Híbrida: Cloud NIM ↔ Local Ollama")
+    st.caption("Arquitectura Híbrida: Cloud NIM ↔ Local Ollama ↔ Claude Bridge")
 
     # 1. Selector de Proveedor
     proveedor_sel = st.radio(
         "Proveedor Activo:",
-        ["☁️ NVIDIA NIM (Cloud)", "💻 Ollama (Local)"],
+        [
+            "☁️ NVIDIA NIM (Cloud)",
+            "💻 Ollama (Local)",
+            "🧡 Anthropic Claude (Terminal Bridge)"
+        ],
         index=0,
-        help="Conmuta en caliente entre inferencia remota en la nube o local a costo $0."
+        help="Conmuta entre NVIDIA NIM Cloud, Ollama Local y Claude Code CLI vía Terminal Bridge."
     )
-    es_local = "Ollama" in proveedor_sel
-    proveedor_id = "ollama" if es_local else "nvidia"
+    if "Ollama" in proveedor_sel:
+        proveedor_id = "ollama"
+        es_local = True
+        es_claude = False
+    elif "Claude" in proveedor_sel:
+        proveedor_id = "claude"
+        es_local = False
+        es_claude = True
+    else:
+        proveedor_id = "nvidia"
+        es_local = False
+        es_claude = False
 
     st.markdown("---")
 
@@ -373,6 +388,30 @@ with st.sidebar:
         else:
             st.warning("⚠️ No se detectó Ollama corriendo en `http://127.0.0.1:11434`.")
             modelo_elegido = st.text_input("Nombre del Modelo:", value="gemma4:e4b")
+    elif es_claude:
+        st.markdown("### 🧡 Claude Code CLI (Bridge)")
+        # Chequeo dinámico de disponibilidad del Servidor Puente
+        bridge_online = False
+        try:
+            with httpx.Client(timeout=0.6) as client:
+                r = client.get("http://127.0.0.1:8000/health")
+                if r.status_code == 200:
+                    bridge_online = True
+        except Exception:
+            bridge_online = False
+
+        if bridge_online:
+            st.success("🟢 Servidor Puente Claude Activo (Puerto 8000)")
+            modelo_elegido = st.selectbox(
+                "Selecciona Modelo Claude:",
+                ["claude-3-7-sonnet", "claude-code-cli"],
+                index=0
+            )
+            st.caption("🛡️ Inferencia Zero-Trust vía Claude Code CLI (v2.1.229) sin exponer API Key.")
+        else:
+            st.warning("⚠️ Servidor Puente Claude no detectado en `http://127.0.0.1:8000`.")
+            st.info("Para activarlo, ejecuta en una terminal:\n\n```powershell\npython servidor_claude_bridge.py\n```")
+            modelo_elegido = "claude-code-cli"
     else:
         st.markdown("### ☁️ Modelo Cloud Autorizado")
         modelo_elegido = st.selectbox(
@@ -500,15 +539,17 @@ with tab_playground:
                     rol=rol_sel,
                     denylist=set(denylist_sel)
                 )
-                resultado = run_async_safe(engine.ejecutar_consulta(prompt_usuario.strip()), timeout=50)
+                resultado = run_async_safe(engine.ejecutar_consulta(prompt_usuario.strip()), timeout=80)
 
                 # 1. Métricas de Rendimiento
                 m1, m2, m3, m4, m5 = st.columns(5)
-                m1.metric("Proveedor", "NVIDIA Cloud" if proveedor_id == "nvidia" else "Ollama Local")
+                prov_label = "NVIDIA Cloud" if proveedor_id == "nvidia" else ("Claude Bridge" if proveedor_id == "claude" else "Ollama Local")
+                m1.metric("Proveedor", prov_label)
                 m2.metric("Modelo", modelo_elegido.split("/")[-1])
                 m3.metric("Latencia", f"{resultado['latencia']:.2f} s")
                 m4.metric("Tokens Usados", resultado["tokens"] if resultado["tokens"] else "N/A")
-                m5.metric("Costo Est.", "$0.00" if proveedor_id == "ollama" else "Cloud Credits")
+                costo_label = "$0.00 (Offline)" if proveedor_id == "ollama" else ("$0.00 (Terminal CLI)" if proveedor_id == "claude" else "Cloud Credits")
+                m5.metric("Costo Est.", costo_label)
 
                 # 2. Respuesta Final del Agente
                 st.markdown("#### 🤖 Respuesta del Agente:")
@@ -521,6 +562,9 @@ with tab_playground:
 
                 # 3. Trazabilidad del Protocolo MCP
                 st.markdown("#### 🔍 Trazabilidad del Ciclo MCP (Auditoría de Gobernanza):")
+                if proveedor_id == "claude":
+                    st.info("🧩 **Anthropic Messages API - Visor de Bloques (Slide 8 & 9):** El modelo devuelve un bloque estructurado `tool_use`, la arquitectura valida permisos y ejecuta FastMCP (`tool_result`), y finalmente Claude redacta en un bloque `text`.")
+
                 hubo_tools = False
                 for t in resultado["trazas"]:
                     if t["tool_calls"]:

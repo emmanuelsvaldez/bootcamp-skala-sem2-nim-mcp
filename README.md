@@ -34,12 +34,12 @@ Para evitar errores conceptuales en diseño de software y auditorías de segurid
 
 ## 3. Patrón de Inferencia Híbrida Desacoplada (Factory / Adapter Pattern)
 
-Uno de los pilares arquitectónicos más relevantes de esta implementación para **evaluaciones técnicas y reclutadores de ingeniería** es la eliminación absoluta del *Vendor Lock-in* mediante el desacoplamiento de la capa de inferencia:
+Uno de los pilares arquitectónicos más relevantes de esta implementación para **evaluaciones técnicas y reclutadores de ingeniería** es la eliminación absoluta del *Vendor Lock-in* mediante el desacoplamiento de la capa de inferencia en tres vías:
 
 ```mermaid
 flowchart TD
     Factory["🏭 LLMProviderFactory\n(Patrón Creacional / Adapter)"]
-    Decision{"¿LLM_PROVIDER en .env?"}
+    Decision{"¿LLM_PROVIDER en .env o UI?"}
     
     subgraph Cloud ["☁️ Nube: Producción & Escalabilidad"]
         direction TB
@@ -55,24 +55,36 @@ flowchart TD
         Ollama --- OLL_Det
     end
 
+    subgraph Bridge ["🧡 Terminal Bridge: Zero-Trust Enterprise"]
+        direction TB
+        Claude["🛡️ Claude Code CLI Bridge"]
+        CLD_Det["• Endpoint: localhost:8000/v1\n• Modelo: claude-3-7-sonnet\n• Auth: Sesión OS CLI (claude.exe)\n• Sin API Key expuesta (Cuenta Comunitaria)"]
+        Claude --- CLD_Det
+    end
+
     Factory --> Decision
     Decision -- "'nvidia' (Producción)" --> NIM
     Decision -- "'ollama' (Desarrollo / Offline)" --> Ollama
+    Decision -- "'claude' (Zero-Trust Bridge)" --> Claude
 
     style Factory fill:#eff6ff,stroke:#2563eb,stroke-width:2px,color:#1e3a8a
     style Decision fill:#fef3c7,stroke:#d97706,stroke-width:2px,color:#92400e
     style Cloud fill:#f0fdf4,stroke:#16a34a,stroke-width:2px
     style Local fill:#faf5ff,stroke:#9333ea,stroke-width:2px
+    style Bridge fill:#fff7ed,stroke:#ea580c,stroke-width:2px
     style NIM fill:#ffffff,stroke:#16a34a,stroke-width:2px
     style Ollama fill:#ffffff,stroke:#9333ea,stroke-width:2px
+    style Claude fill:#ffffff,stroke:#ea580c,stroke-width:2px
     style NIM_Det fill:#ffffff,stroke:#86efac,stroke-dasharray: 5 5
     style OLL_Det fill:#ffffff,stroke:#d8b4fe,stroke-dasharray: 5 5
+    style CLD_Det fill:#ffffff,stroke:#fed7aa,stroke-dasharray: 5 5
 ```
 
 ### Justificación de Ingeniería para Entornos Enterprise:
 1. **Eficiencia de Costos y Privacidad (Edge Computing):** Durante fases de desarrollo, depuración y pruebas unitarias de herramientas MCP, el sistema opera con **Ollama Local** (`llama3-groq-tool-use:8b`). Esto permite iterar con latencia baja, sin costo por token y con privacidad total de datos confidenciales.
 2. **Escalabilidad en Producción:** Cuando el sistema pasa a cargas de trabajo intensivas, se conmuta a **NVIDIA NIM** simplemente cambiando `LLM_PROVIDER=nvidia` en `.env`. NIM aporta inferencia acelerada sobre GPUs empresariales Tensor Core y microservicios contenerizados.
-3. **Principio de Sustitución de Liskov e Interfaz Común:** Ambas soluciones implementan contratos compatibles con la especificación OpenAI (`/v1/chat/completions`), permitiendo al agente orquestador (`AgenteOrquestadorMCP`) descubrir, validar y ejecutar herramientas MCP sin cambiar una sola línea de código fuente.
+3. **Seguridad Zero-Trust y Cuentas Comunitarias (Claude CLI Bridge):** Para escenarios académicos, bootcamps o entornos corporativos donde los desarrolladores acceden a Claude mediante cuentas compartidas u organizaciones comunitarias sin autorización para extraer o exponer llaves crudas (`ANTHROPIC_API_KEY`), se implementó un **Servidor Puente ASGI local (puerto 8000)** (`servidor_claude_bridge.py`). El puente traduce la API estándar de OpenAI hacia la sesión autenticada de terminal de **Claude Code CLI** (`claude.exe` v2.1.229) de forma headless con `--strict-mcp-config` e implementa el protocolo estricto de bloques de Anthropic Messages API (`tool_use`, `tool_result`, `text`).
+4. **Principio de Sustitución de Liskov e Interfaz Común:** Las tres soluciones implementan contratos compatibles con la especificación OpenAI (`/v1/chat/completions`), permitiendo al agente orquestador (`AgenteOrquestadorMCP` y `AgenteWorkbenchEngine`) descubrir, validar y ejecutar herramientas MCP sin cambiar una sola línea de código fuente.
 
 ---
 
