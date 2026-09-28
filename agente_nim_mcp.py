@@ -234,7 +234,8 @@ class AgenteOrquestadorMCP:
                     "   d) NUNCA invoques 'cancel_order' en el mismo turno de la primera solicitud.\n"
                     "4. CONFIRMACIÓN EXPLÍCITA RECIBIDA: Solo cuando el usuario confirme explícitamente (ej. 'Sí, confirmo cancelar el pedido 45231'), invoca 'cancel_order' enviando confirmacion_usuario=True.\n"
                     "5. IDEMPOTENCIA: Si la herramienta indica que el pedido ya estaba cancelado previamente, informa al usuario con total claridad sin inventar cobros.\n"
-                    "6. SEGURIDAD: Nunca inventes datos ni fechas si una herramienta falla o no encuentra el pedido. Responde siempre en español profesional."
+                    "6. SEGURIDAD: Nunca inventes datos ni fechas si una herramienta falla o no encuentra el pedido.\n"
+                    "7. IDIOMA ESTRICTO (Language Mirroring): Detecta y respeta SIEMPRE el idioma del usuario. Si el usuario te habla o escribe en español, redacta tu respuesta FINAL 100% en español natural. Si escribe en inglés, responde en inglés. NUNCA respondas en inglés si la consulta fue en español, aunque los nombres de las herramientas sean en inglés."
                 )
             },
             {"role": "user", "content": pregunta_usuario}
