@@ -4,9 +4,10 @@
 > **Ingeniero Desarrollador:** Emmanuel Sánchez  
 > **Entorno:** Antigravity IDE | Windows 11 & WSL2 Ubuntu  
 > **Enlaces a los Videos Demostrativos (YouTube Ocultos):**  
-> * 🔗 **Video 1: Arreglo Cloud (NVIDIA NIM + Nemotron 550B):** [Ver Demostración en YouTube (MkC9zumtRJQ)](https://youtu.be/MkC9zumtRJQ)  
-> * 🔗 **Video 2: Arreglo Local (Ollama + Gemma 9.6 GB):** [Ver Demostración en YouTube (SlxpECvJvXo)](https://youtu.be/SlxpECvJvXo)  
-> **Nota de Evolución Arquitectónica:** A partir de la versión base demostrada en el video, el Workbench en la rama `main` evoluciona incorporando Gobernanza en 4 Capas (Slide 32), los 7 Escenarios oficiales (Slide 23), herramienta transaccional destructiva `cancel_order` con confirmación en dos fases (Human-in-the-loop), control de idempotencia y expansión de la suite a 15 pruebas automatizadas (15/15 PASS).
+> * ☁️ **Video 1: Arreglo Cloud (NVIDIA NIM + Nemotron 550B):** [Ver Demostración en YouTube (MkC9zumtRJQ)](https://youtu.be/MkC9zumtRJQ)  
+> * 💻 **Video 2: Arreglo Local (Ollama + Gemma 9.6 GB):** [Ver Demostración en YouTube (SlxpECvJvXo)](https://youtu.be/SlxpECvJvXo)  
+> * 🧡 **Video 3: Inferencia Zero-Trust (Anthropic Claude 3.7 Sonnet + CLI Bridge):** [Ver Demostración en YouTube (68RsgE8mIQg)](https://youtu.be/68RsgE8mIQg)  
+> **Nota de Evolución Arquitectónica:** A partir de la versión base demostrada en los videos, el Workbench en la rama `main` evoluciona incorporando Gobernanza en 4 Capas (Slide 32), los 7 Escenarios oficiales (Slide 23), herramienta transaccional destructiva `cancel_order` con confirmación en dos fases (Human-in-the-loop), control de idempotencia y expansión de la suite a 15 pruebas automatizadas (15/15 PASS).
 
 ---
 

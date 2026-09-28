@@ -554,10 +554,12 @@ A continuación se presentan las pruebas de ejecución y validación técnica de
 * **Validación:** Demostración interactiva en video de la plataforma para desarrolladores (`app_workbench.py`). Valida en vivo la conmutación entre NVIDIA NIM Cloud y Ollama Local, pruebas interactivas de los 7 escenarios oficiales, control de roles (Menor Privilegio) y Denylist, simulación de caos (503 FastMCP caído), suite de 15 pruebas Pytest y verificación de Salesforce Org.
 * **Ficha Técnica Detallada:** [Consultar FICHA_TECNICA_DEMO_WORKBENCH.md](FICHA_TECNICA_DEMO_WORKBENCH.md)
 * **Demostraciones en Video en YouTube (Ocultos):**
-  * 🔗 **Video 1: Arreglo Cloud (NVIDIA NIM + Nemotron 550B):** [Ver Demostración en YouTube (MkC9zumtRJQ)](https://youtu.be/MkC9zumtRJQ)
-  * 🔗 **Video 2: Arreglo Local (Ollama + Gemma 9.6 GB):** [Ver Demostración en YouTube (SlxpECvJvXo)](https://youtu.be/SlxpECvJvXo)
+  * ☁️ **Video 1: Arreglo Cloud (NVIDIA NIM + Nemotron 550B):** [Ver Demostración en YouTube (MkC9zumtRJQ)](https://youtu.be/MkC9zumtRJQ)
+  * 💻 **Video 2: Arreglo Local (Ollama + Gemma 9.6 GB):** [Ver Demostración en YouTube (SlxpECvJvXo)](https://youtu.be/SlxpECvJvXo)
+  * 🧡 **Video 3: Inferencia Zero-Trust (Anthropic Claude 3.7 Sonnet + CLI Bridge):** [Ver Demostración en YouTube (68RsgE8mIQg)](https://youtu.be/68RsgE8mIQg)
 
 ![Evidencia 9: Demostración en Video del Developer Workbench](docs/img/evidencia_09_workbench_thumbnail.jpg)
+![Evidencia 10: Inferencia Zero-Trust con Claude 3.7 Sonnet y FastMCP](docs/img/thumbnail_claude_exclusive.jpg)
 
 ---
 
