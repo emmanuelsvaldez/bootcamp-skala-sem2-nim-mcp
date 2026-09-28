@@ -548,8 +548,15 @@ with tab_playground:
                 m2.metric("Modelo", modelo_elegido.split("/")[-1])
                 m3.metric("Latencia", f"{resultado['latencia']:.2f} s")
                 m4.metric("Tokens Usados", resultado["tokens"] if resultado["tokens"] else "N/A")
-                costo_label = "$0.00 (Offline)" if proveedor_id == "ollama" else ("$0.00 (Terminal CLI)" if proveedor_id == "claude" else "Cloud Credits")
-                m5.metric("Costo Est.", costo_label)
+                costo_label = "$0.00 (Offline)" if proveedor_id == "ollama" else ("$0.00 (Sesión CLI)*" if proveedor_id == "claude" else "Cloud Credits")
+                m5.metric(
+                    "Costo Est.",
+                    costo_label,
+                    help="Transparencia FinOps: Para Ollama es $0.00 nativo en hardware local. Para Claude Bridge es $0.00 directo para el desarrollador al correr sobre la sesión de terminal, pero a nivel de infraestructura de Anthropic el consumo es real (~$0.002 - $0.003 USD por consulta en Claude 3.7 Sonnet), absorbido por la cuenta comunitaria del bootcamp."
+                )
+
+                if proveedor_id == "claude":
+                    st.caption("💡 ***Nota FinOps de Costos:*** *Aunque en el Workbench se muestra $0.00 para el desarrollador local al no requerir saldo personal ni tarjeta, la inferencia de Claude 3.7 Sonnet tiene un costo real en la nube de Anthropic (~$0.002 a $0.003 USD por consulta según tarifas de $3/MTok in y $15/MTok out), el cual es absorbido por la cuenta comunitaria de SKALA.*")
 
                 # 2. Respuesta Final del Agente
                 st.markdown("#### 🤖 Respuesta del Agente:")

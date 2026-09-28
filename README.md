@@ -289,6 +289,7 @@ flowchart LR
 2. **Eliminación del Delay de Tubería en Windows (`stdin=DEVNULL`):** En Windows, `claude -p` entra en un retardo de 3 segundos esperando entrada por tubería (`no stdin data received in 3s`). Al redirigir `stdin=subprocess.DEVNULL`, la latencia cayó drásticamente de ~6.5 s a **~3.2 s por turno**.
 3. **Alineación con Anthropic Messages API (Slide 8 y 9):** El puente instruye y captura bloques canónicos `tool_use` (`{"type": "tool_use", "name": "...", "input": {...}}`), gobernados por el orquestador (`"Claude propone y el orquestador decide"`) e inyecta la respuesta de FastMCP como bloque `tool_result` para que Claude elabore el bloque final `text` en español natural.
 4. **Protección de Encoding UTF-8:** Envoltura con `io.TextIOWrapper` en `sys.stdout` para prevenir caídas por codec `CP1252` ante emojis de logística generados por el modelo.
+5. **Transparencia FinOps y Economía de Inferencia:** En el Workbench y en las métricas de la terminal se etiqueta como `$0.00 (Sesión CLI)*` para reflejar que el alumno o desarrollador local no requiere tarjeta de crédito ni saldo personal para operar. Sin embargo, a nivel de infraestructura en la nube de Anthropic, **el costo no es cero**: el consumo es real y ronda ~$0.002 - $0.003 USD por consulta según la tarifa oficial de Claude 3.7 Sonnet ($3.00/MTok entrada, $15.00/MTok salida), costo que es absorbido por la suscripción / cuenta comunitaria del bootcamp.
 
 ---
 
