@@ -80,72 +80,97 @@ flowchart TD
 
 ```mermaid
 flowchart TD
-    subgraph Usuario ["Capa de Experiencia"]
+    subgraph Experiencia ["🖥️ Capa de Experiencia"]
         U(["👤 Operador / Usuario Final"])
+        WB["⚡ SKALA Developer Workbench\n(Streamlit app_workbench.py)"]
+        U <--> WB
     end
 
-    subgraph Agente ["Capa de Orquestación Agéntica (Python / Antigravity IDE)"]
+    subgraph Capa1 ["🛡️ Capa 1: Seguridad Perimetral"]
+        InjFilter{"🛡️ Filtro Anti-Prompt Injection\n(Regex Heurístico O(1))"}
+        BlockInj["🚫 Bloqueo Preventivo (0.00s / 0 Tokens)\nAlerta de Seguridad"]
+    end
+
+    subgraph Capa2 ["🔑 Capa 2: Control de Acceso & Menor Privilegio"]
+        RBAC["👥 Menor Privilegio (RBAC)\nSupervisor (RW) vs. Cliente (R)"]
+        Deny["⛔ Denylist Dinámica\n(Prevalencia Jerárquica 403)"]
+    end
+
+    subgraph Capa3 ["🤝 Capa 3: Gobernanza Transaccional"]
+        TwoPhase{"⚠️ Confirmación en 2 Fases\n(Human-in-the-Loop)"}
+        StopWarn["🛑 Detención Turno 1:\nSolicita confirmación explícita"]
+    end
+
+    subgraph Orquestacion ["⚙️ Orquestación del Agente (Python / Antigravity IDE)"]
         A["🧠 Agente Orquestador\n(agente_nim_mcp.py)"]
-        AL["🛡️ Allowlist Estricta\n(track_order)"]
-        LOOP["🔁 Loop Seguro\n(Máx 3 Iteraciones)"]
-        FACTORY["🏭 LLMProviderFactory\n(NIM / Ollama)"]
+        Loop["🔁 Loop Seguro (Máx 3 Iteraciones)"]
+        Factory["🏭 LLMProviderFactory\n(Patrón Adapter / Desacoplado)"]
     end
 
-    subgraph Inferencia ["Capa de Inferencia (LLM)"]
-        direction TB
-        NIM["☁️ NVIDIA NIM Cloud API\n(integrate.api.nvidia.com)"]
-        OLLAMA["💻 Ollama Local Runtime\n(llama3-groq-tool-use:8b)"]
+    subgraph Inferencia ["🧠 Capa de Inferencia Híbrida (LLM)"]
+        NIM["☁️ NVIDIA NIM Cloud API\n(nemotron-3-ultra-550b-a55b)"]
+        Ollama["💻 Ollama Local Runtime\n(gemma4:e4b 9.6GB / llama3 8B)"]
     end
 
-    subgraph ProtocoloMCP ["Capa de Protocolo y Contratos (MCP)"]
-        direction TB
-        ClientMCP["🔌 Cliente MCP"]
-        ServerMCP["⚙️ Servidor MCP Local\n(FastMCP / servidor_mcp.py)"]
-        Tool["📦 Herramienta:\ntrack_order(order_id: str)"]
-        DB[("💾 Mock Database:\nPedidos 45231 & 10001")]
+    subgraph Capa4 ["⚡ Capa 4: Protocolo MCP & Backend Idempotente"]
+        ClientMCP["🔌 Cliente MCP (JSON-RPC 2.0)"]
+        ServerMCP["⚙️ Servidor FastMCP (servidor_mcp.py)"]
+        T_Read["📖 track_order(order_id)\n(Lectura / Bajo Riesgo)"]
+        T_Write["✍️ cancel_order(order_id, confirmacion)\n(Escritura Destructiva / Alto Riesgo)"]
+        IdemControl{"🔄 Control de Idempotencia\n(Estado Previo = Cancelado)"}
+        RetIdem["⚡ ALREADY_CANCELLED\n(Sin duplicar reembolsos)"]
+        DB[("💾 Mock Database Central\nPedidos 45231 & 10001")]
     end
 
-    subgraph Enterprise ["Capa Corporativa Futura (Salesforce & MuleSoft)"]
-        direction TB
+    subgraph Corporativa ["🏢 Capa Corporativa Futura (Salesforce & MuleSoft)"]
         Mule["🛡️ MuleSoft API Gateway\n(Gobernanza & OAuth)"]
-        AF["☁️ Salesforce Agentforce\n(Agente Autónomo)"]
-        OMS[("🏢 ERP / Logística / Transportistas")]
+        AF["☁️ Salesforce Agentforce\n(Org: AgentforceBootcamp)"]
+        ERP[("🏢 ERP / Logística / Transportistas")]
     end
 
-    U <--> A
-    A --> AL
-    A --> LOOP
-    A --> FACTORY
-    FACTORY <--"OpenAI API Compatible"--> NIM
-    FACTORY <--"OpenAI API Compatible"--> OLLAMA
-    A --> ClientMCP
-    ClientMCP <--"JSON-RPC 2.0 (Stdio / In-Process)"--> ServerMCP
-    ServerMCP --> Tool
-    Tool <--> DB
-    Tool -.-> Mule
+    %% Conexiones
+    WB --> InjFilter
+    InjFilter -- "Patrón Malicioso Detectado" --> BlockInj
+    InjFilter -- "Prompt Válido" --> A
+
+    A --> RBAC
+    A --> Deny
+    A --> Loop
+    A --> Factory
+
+    Factory <--"OpenAI API Compatible"--> NIM
+    Factory <--"OpenAI API Compatible"--> Ollama
+
+    A --> TwoPhase
+    TwoPhase -- "Destructiva / Turno 1" --> StopWarn
+    TwoPhase -- "Lectura O Confirmado" --> ClientMCP
+
+    ClientMCP <--"JSON-RPC 2.0 Stdio / In-Process"--> ServerMCP
+    ServerMCP --> T_Read
+    ServerMCP --> T_Write
+
+    T_Read <--> DB
+    T_Write --> IdemControl
+    IdemControl -- "Primera Cancelación" --> DB
+    IdemControl -- "Reintento" --> RetIdem
+
+    T_Read -.-> Mule
+    T_Write -.-> Mule
     Mule -.-> AF
-    Mule -.-> OMS
+    Mule -.-> ERP
 
-    style Usuario fill:#f8fafc,stroke:#64748b,stroke-width:2px
-    style Agente fill:#eff6ff,stroke:#2563eb,stroke-width:2px
-    style Inferencia fill:#f0fdf4,stroke:#16a34a,stroke-width:2px
-    style ProtocoloMCP fill:#faf5ff,stroke:#9333ea,stroke-width:2px
-    style Enterprise fill:#fffbeb,stroke:#d97706,stroke-width:2px
-
-    style U fill:#ffffff,stroke:#64748b,stroke-width:1px
-    style A fill:#ede9fe,stroke:#7c3aed,stroke-width:2px
-    style AL fill:#ede9fe,stroke:#7c3aed,stroke-width:1px
-    style LOOP fill:#ede9fe,stroke:#7c3aed,stroke-width:1px
-    style FACTORY fill:#ede9fe,stroke:#7c3aed,stroke-width:1px
-    style NIM fill:#ffffff,stroke:#16a34a,stroke-width:1px
-    style OLLAMA fill:#ffffff,stroke:#16a34a,stroke-width:1px
-    style ClientMCP fill:#f5f3ff,stroke:#8b5cf6,stroke-width:1px
-    style ServerMCP fill:#f5f3ff,stroke:#8b5cf6,stroke-width:1px
-    style Tool fill:#f5f3ff,stroke:#8b5cf6,stroke-width:1px
-    style DB fill:#f5f3ff,stroke:#8b5cf6,stroke-width:2px
-    style Mule fill:#ffffff,stroke:#d97706,stroke-width:1px
-    style AF fill:#ffffff,stroke:#d97706,stroke-width:1px
-    style OMS fill:#ffffff,stroke:#d97706,stroke-width:1px
+    %% Estilos
+    style Experiencia fill:#f8fafc,stroke:#64748b,stroke-width:2px,color:#0f172a
+    style Capa1 fill:#fef2f2,stroke:#ef4444,stroke-width:2px,color:#991b1b
+    style Capa2 fill:#fefce8,stroke:#eab308,stroke-width:2px,color:#854d0e
+    style Capa3 fill:#e0e7ff,stroke:#6366f1,stroke-width:2px,color:#3730a3
+    style Orquestacion fill:#eff6ff,stroke:#2563eb,stroke-width:2px,color:#1e40af
+    style Inferencia fill:#f0fdf4,stroke:#16a34a,stroke-width:2px,color:#166534
+    style Capa4 fill:#faf5ff,stroke:#9333ea,stroke-width:2px,color:#6b21a8
+    style Corporativa fill:#fffbeb,stroke:#d97706,stroke-width:2px,color:#92400e
+    style BlockInj fill:#fee2e2,stroke:#dc2626,stroke-width:2px,color:#991b1b
+    style StopWarn fill:#dbeafe,stroke:#2563eb,stroke-width:2px,color:#1e40af
+    style RetIdem fill:#dcfce7,stroke:#16a34a,stroke-width:2px,color:#166534
 ```
 
 ---
