@@ -58,7 +58,7 @@ flowchart TD
     subgraph Bridge ["🧡 Terminal Bridge: Zero-Trust Enterprise"]
         direction TB
         Claude["🛡️ Claude Code CLI Bridge"]
-        CLD_Det["• Endpoint: localhost:8000/v1\n• Modelo: claude-3-7-sonnet\n• Auth: Sesión OS CLI (claude.exe)\n• Sin API Key expuesta (Cuenta Comunitaria)"]
+        CLD_Det["• Endpoint: localhost:8000/v1\n• Modelo: claude-3-7-sonnet\n• Auth: Sesión OS CLI (claude.exe)\n• Sin API Key expuesta (Cuenta en Común / Prueba)"]
         Claude --- CLD_Det
     end
 
@@ -83,7 +83,7 @@ flowchart TD
 ### Justificación de Ingeniería para Entornos Enterprise:
 1. **Eficiencia de Costos y Privacidad (Edge Computing):** Durante fases de desarrollo, depuración y pruebas unitarias de herramientas MCP, el sistema opera con **Ollama Local** (`llama3-groq-tool-use:8b`). Esto permite iterar con latencia baja, sin costo por token y con privacidad total de datos confidenciales.
 2. **Escalabilidad en Producción:** Cuando el sistema pasa a cargas de trabajo intensivas, se conmuta a **NVIDIA NIM** simplemente cambiando `LLM_PROVIDER=nvidia` en `.env`. NIM aporta inferencia acelerada sobre GPUs empresariales Tensor Core y microservicios contenerizados.
-3. **Seguridad Zero-Trust y Cuentas Comunitarias (Claude CLI Bridge):** Para escenarios académicos, bootcamps o entornos corporativos donde los desarrolladores acceden a Claude mediante cuentas compartidas u organizaciones comunitarias sin autorización para extraer o exponer llaves crudas (`ANTHROPIC_API_KEY`), se implementó un **Servidor Puente ASGI local (puerto 8000)** (`servidor_claude_bridge.py`). El puente traduce la API estándar de OpenAI hacia la sesión autenticada de terminal de **Claude Code CLI** (`claude.exe` v2.1.229) de forma headless con `--strict-mcp-config` e implementa el protocolo estricto de bloques de Anthropic Messages API (`tool_use`, `tool_result`, `text`).
+3. **Seguridad Zero-Trust y Cuentas en Común de Prueba (Claude CLI Bridge):** Para escenarios académicos, bootcamps o entornos corporativos donde los desarrolladores acceden a Claude mediante cuentas en común o cuentas compartidas de prueba sin autorización para extraer o exponer llaves crudas (`ANTHROPIC_API_KEY`), se implementó un **Servidor Puente ASGI local (puerto 8000)** (`servidor_claude_bridge.py`). El puente traduce la API estándar de OpenAI hacia la sesión autenticada de terminal de **Claude Code CLI** (`claude.exe` v2.1.229) de forma headless con `--strict-mcp-config` e implementa el protocolo estricto de bloques de Anthropic Messages API (`tool_use`, `tool_result`, `text`).
 4. **Principio de Sustitución de Liskov e Interfaz Común:** Las tres soluciones implementan contratos compatibles con la especificación OpenAI (`/v1/chat/completions`), permitiendo al agente orquestador (`AgenteOrquestadorMCP` y `AgenteWorkbenchEngine`) descubrir, validar y ejecutar herramientas MCP sin cambiar una sola línea de código fuente.
 
 ---
@@ -254,11 +254,11 @@ flowchart TD
 
 ### 4.3 Caso de Estudio: Servidor Puente Claude CLI (`servidor_claude_bridge.py`)
 
-#### 🏢 Contexto y Desafío de Ingeniería (El Problema de las Cuentas Comunitarias)
-En entornos académicos, bootcamps y organizaciones corporativas que operan bajo principios de **Zero-Trust**, los desarrolladores frecuentemente reciben acceso a modelos de lenguaje avanzados a través de **cuentas compartidas o licencias empresariales centralizadas**.
+#### 🏢 Contexto y Desafío de Ingeniería (El Manejo Seguro de Cuentas en Común y de Prueba)
+En entornos académicos, bootcamps y organizaciones corporativas que operan bajo principios de **Zero-Trust**, los desarrolladores frecuentemente reciben acceso a modelos de lenguaje avanzados a través de **cuentas en común o licencias compartidas de prueba**.
 
 * **La Propuesta Inicial (Inviable):** Consumo del endpoint directo de Anthropic (`api.anthropic.com`) usando el SDK oficial (`anthropic.Anthropic()`). Esta vía requería colocar una `ANTHROPIC_API_KEY` maestra en texto plano dentro de un archivo `.env`.
-* **El Riesgo de Seguridad:** Si una clave comunitaria se filtra en un commit de GitHub, se comprometen los créditos, el historial y el acceso de toda la organización. Además, por política de seguridad, las cuentas comunitarias no proveen API keys en texto plano a los usuarios finales.
+* **El Riesgo de Seguridad:** Si una clave compartida se filtra en un commit de GitHub, se comprometen los créditos, el historial y el acceso de toda la organización. Además, por política de seguridad, las cuentas en común de prueba no proveen API keys en texto plano a los usuarios finales.
 * **El Recurso Real Disponible:** El desarrollador contaba únicamente con el cliente de terminal oficial autenticado en el sistema operativo: **`claude.exe` (Claude Code CLI v2.1.229)**.
 
 #### 💡 La Solución de Arquitectura: Servidor Puente ASGI Local (Puerto 8000)
@@ -285,11 +285,11 @@ flowchart LR
 ```
 
 #### ⚙️ Optimizaciones Clave de Implementación:
-1. **Aislamiento de Extensiones Nube (`--strict-mcp-config`):** La cuenta comunitaria poseía servidores MCP en la nube (Gmail, Google Drive, Slack, Canva). Al añadir `--strict-mcp-config` y `--tools ""`, se desactivan extensiones de terceros y herramientas CLI locales, forzando a Claude a operar exclusivamente sobre el contrato FastMCP inyectado.
+1. **Aislamiento de Extensiones Nube (`--strict-mcp-config`):** La cuenta en común de prueba poseía servidores MCP en la nube (Gmail, Google Drive, Slack, Canva). Al añadir `--strict-mcp-config` y `--tools ""`, se desactivan extensiones de terceros y herramientas CLI locales, forzando a Claude a operar exclusivamente sobre el contrato FastMCP inyectado.
 2. **Eliminación del Delay de Tubería en Windows (`stdin=DEVNULL`):** En Windows, `claude -p` entra en un retardo de 3 segundos esperando entrada por tubería (`no stdin data received in 3s`). Al redirigir `stdin=subprocess.DEVNULL`, la latencia cayó drásticamente de ~6.5 s a **~3.2 s por turno**.
-3. **Alineación con Anthropic Messages API (Slide 8 y 9):** El puente instruye y captura bloques canónicos `tool_use` (`{"type": "tool_use", "name": "...", "input": {...}}`), gobernados por el orquestador (`"Claude propone y el orquestador decide"`) e inyecta la respuesta de FastMCP como bloque `tool_result` para que Claude elabore el bloque final `text` en español natural.
+3. **Alineación con Anthropic Messages API:** El puente instruye y captura bloques canónicos `tool_use` (`{"type": "tool_use", "name": "...", "input": {...}}`), gobernados por el orquestador (`"Claude propone y el orquestador decide"`) e inyecta la respuesta de FastMCP como bloque `tool_result` para que Claude elabore el bloque final `text` en español natural.
 4. **Protección de Encoding UTF-8:** Envoltura con `io.TextIOWrapper` en `sys.stdout` para prevenir caídas por codec `CP1252` ante emojis de logística generados por el modelo.
-5. **Transparencia FinOps y Economía de Inferencia:** En el Workbench y en las métricas de la terminal se etiqueta como `$0.00 (Sesión CLI)*` para reflejar que el alumno o desarrollador local no requiere tarjeta de crédito ni saldo personal para operar. Sin embargo, a nivel de infraestructura en la nube de Anthropic, **el costo no es cero**: el consumo es real y ronda ~$0.002 - $0.003 USD por consulta según la tarifa oficial de Claude 3.7 Sonnet ($3.00/MTok entrada, $15.00/MTok salida), costo que es absorbido por la suscripción / cuenta comunitaria del bootcamp.
+5. **Transparencia FinOps y Economía de Inferencia:** En el Workbench y en las métricas de la terminal se etiqueta como `$0.00 (Sesión CLI)*` para reflejar que el alumno o desarrollador local no requiere tarjeta de crédito ni saldo personal para operar. Sin embargo, a nivel de infraestructura en la nube de Anthropic, **el costo no es cero**: el consumo es real y ronda ~$0.002 - $0.003 USD por consulta según la tarifa oficial de Claude 3.7 Sonnet ($3.00/MTok entrada, $15.00/MTok salida), costo que es absorbido por la cuenta en común / cuenta de prueba del bootcamp.
 
 ---
 
@@ -353,7 +353,7 @@ Edita `.env` con tu configuración (`LLM_PROVIDER=ollama` para pruebas locales o
 
 ---
 
-## 7. Arquitectura de Seguridad y Gobernanza en 4 Capas (Slide 32)
+## 7. Arquitectura de Seguridad y Gobernanza en 4 Capas
 
 Siguiendo las directrices del M.C. Fernando Morquecho sobre arquitecturas agénticas seguras, delegar decisiones críticas de seguridad exclusivamente al *system prompt* del LLM es un antipatrón riesgoso. Esta solución implementa una defensa en profundidad distribuida en 4 capas desacopladas:
 
@@ -404,7 +404,7 @@ flowchart TD
 
 ## 8. Diseño y Gobierno de Herramientas Enterprise (Tool Calling)
 
-### 8.1 Checklist de Diseño de una Buena Herramienta (Slide 19)
+### 8.1 Checklist de Diseño de una Buena Herramienta
 Para garantizar interoperabilidad y precisión al ser invocadas por modelos de lenguaje, cada herramienta en `servidor_mcp.py` cumple la siguiente lista de verificación:
 
 | Criterio | Buenas Prácticas Aplicadas en este Proyecto |
@@ -416,7 +416,7 @@ Para garantizar interoperabilidad y precisión al ser invocadas por modelos de l
 | **Respuesta Estructurada** | Siempre retorna JSON serializable con claves consistentes (`status`, `tipo_operacion`, `mensaje`, `datos`). |
 | **Manejo Interno de Errores** | Captura fallos y pedidos inexistentes devolviendo JSON con código de error amigable, impidiendo que el servidor colapse. |
 
-### 8.2 Matriz Oficial de los 7 Escenarios de Prueba (Slide 23)
+### 8.2 Matriz Oficial de los 7 Escenarios de Prueba
 La solución fue sometida y validada contra la matriz de 7 escenarios de la rúbrica oficial de SKALA:
 
 | # | Escenario | Entrada de Prueba / Condición | Comportamiento Esperado del Sistema | Capa de Seguridad Activa | Resultado Pytest |
@@ -429,28 +429,29 @@ La solución fue sometida y validada contra la matriz de 7 escenarios de la rúb
 | **E6** | **Backend caído (503)** | Interruptor 'Simular Servidor MCP Caído' activo | Captura la falla de conexión y comunica la indisponibilidad al usuario con transparencia. | Capa 4 / Resiliencia Caos | `PASSED` ✅ |
 | **E7** | **Menor privilegio / Denylist** | *"Cancela pedido 45231"* bajo rol `cliente_consulta` o denylist | Bloquea la herramienta con error 403 de permisos antes de tocar el backend. | Capa 2 (RBAC / Denylist) | `PASSED` ✅ |
 
-### 8.3 Benchmarking Empírico de Rendimiento y Gobernanza (NVIDIA NIM vs. Ollama Local)
-Durante las pruebas de campo en el **SKALA Agentic Developer Workbench**, se evaluó el desempeño y la latencia máxima de los 7 escenarios oficiales y sus combinaciones de gobernanza, comparando **NVIDIA NIM Cloud (`nemotron-3-ultra-550b-a55b`)** contra **Ollama Local (`gemma4:e4b` de 9.6 GB)**:
+### 8.3 Benchmarking Empírico de Rendimiento y Gobernanza (Tríada: NVIDIA NIM vs. Ollama Local vs. Claude Bridge)
+Durante las pruebas de campo en el **SKALA Agentic Developer Workbench**, se evaluó el desempeño y la latencia máxima de los 7 escenarios oficiales y sus combinaciones de gobernanza, comparando **NVIDIA NIM Cloud (`nemotron-3-ultra-550b-a55b`)**, **Ollama Local (`gemma4:e4b` de 9.6 GB)** y **Claude 3.7 Sonnet (Zero-Trust Bridge)**:
 
-| # | Escenario y Configuración | Capa de Seguridad Activa | Nemotron (Cloud NIM) | Gemma (Local Ollama) | Delta / Ratio | Veredicto de Gobernanza |
+| # | Escenario y Configuración | Capa de Seguridad Activa | Nemotron (Cloud NIM) | Gemma (Local Ollama) | Claude 3.7 (Zero-Trust Bridge) | Veredicto de Gobernanza |
 |---|---|---|:---:|:---:|:---:|---|
-| **E1** | Rastreo Directo (Rol Supervisor) | Capa 4 (FastMCP Read) | **10.00 s** | 38.79 s | +287% (3.8x) | ✅ **100% Precisión** (Invoca `track_order`) |
-| **E1-B** | Rastreo Directo (Supervisor + **Denylist `track_order`**) | **Capa 2 (Denylist Precedence)** | **6.90 s** | 23.73 s | +243% (3.4x) | ⛔ **Bloqueo HTTP 403** (`ToolEnDenylist` prevalece sobre Supervisor) |
-| **E2** | Dato Faltante (Sin ID de pedido) | Control Lógico Agéntico | **4.49 s** | 10.41 s | +131% (2.3x) | ✅ **100% Precisión** (Pide ID cordialmente) |
-| **E3** | Cancelación Turno 1 (Supervisor) | Capa 3 (Human-in-the-Loop) | **13.07 s** | 32.02 s | +145% (2.4x) | ✅ **100% Seguro** (Detiene escritura, pide confirmación) |
-| **E4-B** | Cancelación Confirmada + **Denylist `cancel_order`** | **Capa 2 (Denylist Interception)** | **12.16 s** | 30.56 s | +151% (2.5x) | ⛔ **Bloqueo HTTP 403** (`ToolEnDenylist`) |
-| **E4** | Cancelación Confirmada (Supervisor) | Capa 3 & 4 (FastMCP Write) | **16.65 s** | 28.05 s | +68% (1.7x) | ✅ **Cancelado con Éxito** (`DB Commit`) |
-| **E4-Bis**| Segunda Cancelación (Supervisor) | Capa 4 (Idempotencia) | **16.00 s** | 32.39 s | +102% (2.0x) | 🔄 **Idempotente** (`ALREADY_CANCELLED`) |
-| **E5** | Prompt Injection Malicioso | **Capa 1 (Regex Preventivo)** | **0.00 s** | **0.00 s** | **0% (Instantáneo)** | 🛡️ **Bloqueo Preventivo** (0 tokens consumidos) |
-| **E6** | Simulación Backend Caído (503) | Resiliencia MCP / Failover | **12.36 s** | 21.49 s | +73% (1.7x) | ⚠️ **HTTP 503 Transparente** (Sin alucinación) |
-| **E7** | Cancelación Bajo Rol Cliente | Capa 2 (Menor Privilegio) | **23.23 s** | 31.26 s | +34% (1.3x) | ⛔ **Bloqueo HTTP 403** (`MenorPrivilegioDenegado`) |
-| **E7-B** | Cancelación Rol Cliente + Denylist | Capa 2 (Doble Barrera RBAC) | **22.04 s** | 27.41 s | +24% (1.2x) | ⛔ **Bloqueo HTTP 403** (Detenido por menor privilegio) |
+| **E1** | Rastreo Directo (Rol Supervisor) | Capa 4 (FastMCP Read) | **10.00 s** | 38.79 s | **10.70 s** | ✅ **100% Precisión** (Invoca `track_order`) |
+| **E1-B** | Rastreo Directo (Supervisor + **Denylist `track_order`**) | **Capa 2 (Denylist Precedence)** | **6.90 s** | 23.73 s | **7.80 s** | ⛔ **Bloqueo HTTP 403** (`ToolEnDenylist` prevalece sobre Supervisor) |
+| **E2** | Dato Faltante (Sin ID de pedido) | Control Lógico Agéntico | **4.49 s** | 10.41 s | **5.52 s** | ✅ **100% Precisión** (Pide ID cordialmente) |
+| **E3** | Cancelación Turno 1 (Supervisor) | Capa 3 (Human-in-the-Loop) | **13.07 s** | 32.02 s | **9.39 s** | ✅ **100% Seguro** (Detiene escritura, pide confirmación) |
+| **E4-B** | Cancelación Confirmada + **Denylist `cancel_order`** | **Capa 2 (Denylist Interception)** | **12.16 s** | 30.56 s | **7.80 s** | ⛔ **Bloqueo HTTP 403** (`ToolEnDenylist`) |
+| **E4** | Cancelación Confirmada (Supervisor) | Capa 3 & 4 (FastMCP Write) | **16.65 s** | 28.05 s | **7.31 s** | ✅ **Cancelado con Éxito** (`DB Commit`) |
+| **E4-Bis**| Segunda Cancelación (Supervisor) | Capa 4 (Idempotencia) | **16.00 s** | 32.39 s | **12.09 s** | 🔄 **Idempotente** (`ALREADY_CANCELLED`) |
+| **E5** | Prompt Injection Malicioso | **Capa 1 (Regex Preventivo)** | **0.00 s** | **0.00 s** | **0.00 s** | 🛡️ **Bloqueo Preventivo** (0 tokens consumidos) |
+| **E6** | Simulación Backend Caído (503) | Resiliencia MCP / Failover | **12.36 s** | 21.49 s | **7.18 s** | ⚠️ **HTTP 503 Transparente** (Sin alucinación) |
+| **E7** | Cancelación Bajo Rol Cliente | Capa 2 (Menor Privilegio) | **23.23 s** | 31.26 s | **7.80 s** | ⛔ **Bloqueo HTTP 403** (`MenorPrivilegioDenegado`) |
+| **E7-B** | Cancelación Rol Cliente + Denylist | Capa 2 (Doble Barrera RBAC) | **22.04 s** | 27.41 s | **7.80 s** | ⛔ **Bloqueo HTTP 403** (Detenido por menor privilegio) |
 
 #### Conclusiones Clave de Arquitectura:
-1. **Prevalencia de Denylist (Capa 2):** En **E1-B**, a pesar de que el rol Supervisor tiene permitido consultar pedidos, la *Denylist* activa sobre `track_order` prevalece de inmediato, abortando la inferencia en 6.90s (NIM) y 23.73s (Gemma) sin tocar FastMCP.
-2. **Eficiencia Absoluta de Capa 1:** Bloqueo instantáneo en 0.00s sin consumo de tokens ni VRAM al filtrar patrones maliciosos en memoria estática.
-3. **Densidad de Parámetros (Gemma 9.6 GB vs Modelos 8B):** Gemma erradicó la sobre-cautela y el *language drift* de modelos más pequeños, logrando un 100% de precisión en los 7 escenarios y sus combinaciones en español.
-4. **Trade-off Latencia Cloud vs. Soberanía Local:** Inferencia en la nube ~2x-3x más rápida frente a soberanía absoluta de datos sin costos marginales en local.
+1. **Prevalencia de Denylist (Capa 2):** En **E1-B**, a pesar de que el rol Supervisor tiene permitido consultar pedidos, la *Denylist* activa sobre `track_order` prevalece de inmediato, abortando la inferencia en 6.90s (NIM), 23.73s (Gemma) y 7.80s (Claude) sin tocar FastMCP.
+2. **Eficiencia Absoluta de Capa 1:** Bloqueo instantáneo en 0.00s sin consumo de tokens ni VRAM al filtrar patrones maliciosos en memoria estática en los tres proveedores.
+3. **Agilidad y Precisión de Claude 3.7 Sonnet (Zero-Trust Bridge):** Claude superó a los modelos en nube abierta y local en operaciones de escritura con confirmación (**7.31 s en E4** vs 16.65 s en NIM y 28.05 s en Gemma) y en resiliencia de backend caído (**7.18 s en E6**), gracias a la generación directa de bloques concisos `tool_use`.
+4. **Densidad de Parámetros (Gemma 9.6 GB vs Modelos 8B):** Gemma erradicó la sobre-cautela y el *language drift* de modelos más pequeños, logrando un 100% de precisión en los 7 escenarios y sus combinaciones en español.
+5. **Trade-off Latencia Cloud vs. Soberanía Local:** Inferencia en la nube ~2x-4x más rápida frente a soberanía absoluta de datos sin costos marginales en local.
 
 ### 8.4 Idempotencia en Operaciones de Agentes
 En entornos distribuidos y con agentes autónomos, la **idempotencia** es fundamental debido a:
@@ -520,7 +521,7 @@ A continuación se presentan las pruebas de ejecución y validación técnica de
 ---
 
 ### 📸 Evidencia 5: Batería Integral de Pruebas Automatizadas con Pytest (15 Tests / 7 Escenarios)
-* **Validación:** **15/15 pruebas unitarias, de integración y de seguridad pasando en verde (`PASSED`)** en 1.30s, validando contratos MCP, los 7 escenarios de la Diapositiva 23, idempotencia, 2-fases de cancelación y bloqueo de prompt injection.
+* **Validación:** **15/15 pruebas unitarias, de integración y de seguridad pasando en verde (`PASSED`)** en 1.30s, validando contratos MCP, los 7 escenarios oficiales, idempotencia, 2-fases de cancelación y bloqueo de prompt injection.
 * **Comando:** `pytest -v test_suite_automatizada.py`
 
 ![Evidencia 5: Pruebas Automatizadas](docs/img/evidencia_05_pruebas_automatizadas_pytest.png)
