@@ -71,17 +71,15 @@ def reiniciar_db():
 @mcp.tool(name="track_order")
 def track_order(order_id: str) -> str:
     """
-    Consulta el estado y fecha estimada de un pedido corporativo a partir de su número.
-    
-    Usar esta herramienta ÚNICAMENTE cuando el usuario proporcione un identificador o número
-    específico de pedido (por ejemplo '45231' o '10001'). No inventes números de pedido.
-    NO usar para cancelar ni modificar pedidos.
+    Rastrear pedido / Track order status.
+    Retrieves real-time shipping status, carrier, and estimated delivery date of a corporate order using its order ID (e.g. '45231', '10001').
+    Call this tool whenever the user inquires about an order status, location, or delivery with an order ID.
     
     Args:
-        order_id: Identificador único del pedido (cadena numérica o alfanumérica).
+        order_id: Identificador único del pedido / Numeric order identifier string (e.g. '45231').
         
     Returns:
-        JSON serializable con los detalles del pedido o un mensaje de error si no existe.
+        JSON con los detalles del pedido o mensaje de error si no existe.
     """
     # Validación preventiva de entrada
     order_id_limpio = str(order_id).strip()
@@ -114,6 +112,7 @@ def track_order(order_id: str) -> str:
 @mcp.tool(name="cancel_order")
 def cancel_order(order_id: str, motivo: str = "Solicitud de cliente", confirmacion_usuario: bool = False) -> str:
     """
+    Cancelar pedido / Cancel order permanently.
     Cancela definitivamente un pedido corporativo e inicia el proceso de reembolso.
     
     Esta herramienta es de ESCRITURA, destructiva e irreversible.

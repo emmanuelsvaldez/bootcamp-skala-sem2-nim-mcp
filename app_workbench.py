@@ -81,11 +81,10 @@ def run_async_safe(coro, timeout=45):
 @st.cache_data(ttl=10)
 def obtener_modelos_ollama() -> List[Dict[str, Any]]:
     """
-    Consulta los modelos locales disponibles en Ollama y EXCLUYE
-    modelos mayores a 6 GB (filtrando el modelo de 9.6 GB gemma4:e4b).
+    Consulta todos los modelos locales disponibles en Ollama sin restricciones de tamaño.
     """
     url = os.getenv("OLLAMA_BASE_URL", "http://127.0.0.1:11434").replace("/v1", "") + "/api/tags"
-    modelos_filtrados = []
+    modelos = []
     try:
         with httpx.Client(timeout=2.0) as client:
             resp = client.get(url)
@@ -93,16 +92,14 @@ def obtener_modelos_ollama() -> List[Dict[str, Any]]:
                 data = resp.json()
                 for m in data.get("models", []):
                     size_gb = m.get("size", 0) / (1024 ** 3)
-                    # Filtro solicitado: descartar modelos pesados de ~9 GB
-                    if size_gb < 6.0:
-                        modelos_filtrados.append({
-                            "name": m.get("name"),
-                            "size_gb": f"{size_gb:.1f} GB",
-                            "modified": m.get("modified_at", "")[:10]
-                        })
+                    modelos.append({
+                        "name": m.get("name"),
+                        "size_gb": f"{size_gb:.1f} GB",
+                        "modified": m.get("modified_at", "")[:10]
+                    })
     except Exception:
         pass
-    return modelos_filtrados
+    return modelos
 
 
 MODELOS_NIM_CONOCIDOS = [
@@ -203,16 +200,16 @@ class AgenteWorkbenchEngine:
             {
                 "role": "system",
                 "content": (
-                    "Eres un asistente logístico corporativo desarrollado por Emmanuel Sánchez.\n"
-                    "Tienes acceso a herramientas MCP para consultar y cancelar pedidos según tu rol y políticas de seguridad.\n\n"
-                    "REGLAS DE OPERACIÓN:\n"
-                    "1. RASTREO (track_order): Cuando el usuario pregunte por el estado de un pedido y proporcione su ID numérico (ej. 45231, 10001), invoca INMEDIATAMENTE 'track_order'. NUNCA pidas confirmación previa ni repreguntes si el ID es correcto; simplemente invoca 'track_order'.\n"
-                    "2. DATO FALTANTE: Si el usuario NO proporciona un ID de pedido, pídelo amablemente sin invocar herramientas ni inventar datos.\n"
-                    "3. CANCELACIÓN (cancel_order): Si el usuario solicita cancelar un pedido por primera vez, consulta primero 'track_order' para conocer el estado y solicita confirmación explícita. NUNCA canceles en el primer turno.\n"
-                    "4. CONFIRMACIÓN RECIBIDA: Solo cuando el usuario confirme explícitamente (ej. 'Sí, confirmo cancelar el pedido 45231'), invoca 'cancel_order' enviando confirmacion_usuario=True.\n"
-                    "5. IDEMPOTENCIA: Si la herramienta indica que el pedido ya estaba cancelado previamente, infórmalo con claridad sin duplicar cobros.\n"
-                    "6. SEGURIDAD: Si el servidor MCP reporta error o indisponibilidad (503), infórmalo con transparencia sin inventar datos.\n"
-                    "7. IDIOMA ESTRICTO (Language Mirroring): Responde SIEMPRE en el mismo idioma en que el usuario formuló su mensaje. Si el usuario te habla o escribe en español, redacta tu respuesta FINAL 100% en español natural. Si escribe en inglés, responde en inglés. NUNCA respondas en inglés si la consulta fue en español, aunque los nombres de las herramientas sean en inglés."
+                    "You are an enterprise logistics AI assistant developed by Emmanuel Sánchez.\n"
+                    "CRITICAL LANGUAGE RULE: The user interacts in Spanish. Your final synthesized response to the user MUST ALWAYS be 100% in natural Spanish. Never answer in English to a query in Spanish.\n\n"
+                    "OPERATIONAL RULES:\n"
+                    "1. ORDER TRACKING (track_order): When the user inquires about an order status and provides an order ID (e.g. 45231, 10001), you MUST immediately invoke 'track_order' with order_id. Do NOT ask for confirmation on track_order; call the tool directly.\n"
+                    "2. MISSING DATA: If the user asks about an order without specifying an order ID, do NOT invoke any tool. Politely ask for the order ID in Spanish (ejemplo: 'Con gusto te ayudo, ¿podrías indicarme tu número de pedido?').\n"
+                    "3. CANCELLATION PHASE 1: If the user requests to cancel an order for the first time, first invoke 'track_order' to inspect order status, and ask the user for explicit confirmation before canceling. NEVER invoke 'cancel_order' on the first turn.\n"
+                    "4. CONFIRMATION RECEIVED (PHASE 2): Only when explicit user confirmation is received (e.g. 'Sí, confirmo la cancelación del pedido 45231'), invoke 'cancel_order' with confirmacion_usuario=True.\n"
+                    "5. IDEMPOTENCY: If the tool reports ALREADY_CANCELLED, explain clearly in Spanish that the order was already cancelled, with no duplicate charges.\n"
+                    "6. BACKEND UNAVAILABLE: If a tool reports 503 or error, report it transparently in Spanish.\n"
+                    "7. LANGUAGE MIRRORING: Always answer in the user's language (Spanish for Spanish queries)."
                 )
             },
             {"role": "user", "content": prompt_usuario}
@@ -362,16 +359,20 @@ with st.sidebar:
 
     # 2. Selector de Modelo Dinámico
     if es_local:
-        st.markdown("### 📦 Modelos Locales (< 6 GB)")
+        st.markdown("### 📦 Modelos Locales")
         modelos_locales = obtener_modelos_ollama()
         if modelos_locales:
             nombres = [m["name"] for m in modelos_locales]
-            idx_def = nombres.index("llama3-groq-tool-use:8b") if "llama3-groq-tool-use:8b" in nombres else 0
+            idx_def = nombres.index("gemma4:e4b") if "gemma4:e4b" in nombres else (
+                nombres.index("llama3-groq-tool-use:8b") if "llama3-groq-tool-use:8b" in nombres else 0
+            )
             modelo_elegido = st.selectbox("Selecciona Modelo:", nombres, index=idx_def)
-            st.caption("💡 Se excluyó automáticamente el modelo de 9.6 GB para proteger la VRAM.")
+            info_mod = next((m for m in modelos_locales if m["name"] == modelo_elegido), None)
+            if info_mod:
+                st.caption(f"💾 Tamaño: **{info_mod['size_gb']}** | Modelo local listo para inferencia.")
         else:
             st.warning("⚠️ No se detectó Ollama corriendo en `http://127.0.0.1:11434`.")
-            modelo_elegido = st.text_input("Nombre del Modelo:", value="llama3-groq-tool-use:8b")
+            modelo_elegido = st.text_input("Nombre del Modelo:", value="gemma4:e4b")
     else:
         st.markdown("### ☁️ Modelo Cloud Autorizado")
         modelo_elegido = st.selectbox(
@@ -463,8 +464,8 @@ with tab_playground:
     def cargar_prompt(texto_sugerido: str):
         st.session_state["user_prompt"] = texto_sugerido
 
-    # Botones interactivos con la Matriz de los 7 Escenarios (Diapositiva 23 - Tool Calling)
-    st.markdown("**Matriz Oficial de los 7 Escenarios de Prueba (Diapositiva 23):**")
+    # Botones interactivos con escenarios de prueba preconfigurados
+    st.markdown("**Escenarios de Prueba:**")
     st.caption("Haz clic en cualquier escenario para pre-cargar la consulta en el motor agéntico:")
 
     col_e1, col_e2, col_e3, col_e4 = st.columns(4)
