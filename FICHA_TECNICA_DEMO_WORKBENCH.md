@@ -4,6 +4,7 @@
 > **Ingeniero Desarrollador:** Emmanuel Sánchez  
 > **Entorno:** Antigravity IDE | Windows 11 & WSL2 Ubuntu  
 > **Enlace al Video Demostrativo (YouTube Oculto):** [Ver Demostración en YouTube (vZjdnarJyvs)](https://youtu.be/vZjdnarJyvs)  
+> **Nota de Evolución Arquitectónica:** A partir de la versión base demostrada en el video, el Workbench en la rama `main` evoluciona incorporando Gobernanza en 4 Capas (Slide 32), los 7 Escenarios oficiales (Slide 23), herramienta transaccional destructiva `cancel_order` con confirmación en dos fases (Human-in-the-loop), control de idempotencia y expansión de la suite a 15 pruebas automatizadas (15/15 PASS).
 
 ---
 

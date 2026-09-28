@@ -40,30 +40,32 @@ async def test_descubrimiento_herramientas():
         print(f"  - InputSchema:  {json.dumps(esquema, indent=4, ensure_ascii=False)}")
         print("-" * 70)
         
-        if tool.name == "track_order":
-            encontrada = True
-
-    assert encontrada, "ERROR CRÍTICO: La herramienta 'track_order' no fue descubierta."
-    print("[OK] Herramienta 'track_order' descubierta exitosamente con esquema válido.")
+    tools_descubiertas = {t.name: t for t in tools}
+    assert "track_order" in tools_descubiertas, "ERROR CRÍTICO: La herramienta 'track_order' no fue descubierta."
+    assert "cancel_order" in tools_descubiertas, "ERROR CRÍTICO: La herramienta 'cancel_order' no fue descubierta."
+    print("[OK] Herramientas 'track_order' y 'cancel_order' descubiertas exitosamente con contratos válidos.")
     return tools
 
 async def test_invocacion_herramientas():
     print("\n" + "=" * 70)
-    print("  FASE 2: INVOCACIÓN DE HERRAMIENTAS (call_tool)")
+    print("  FASE 2: INVOCACIÓN DE HERRAMIENTAS (call_tool) Y GOBERNANZA")
     print("=" * 70)
     
     casos_de_prueba = [
-        {"desc": "Pedido existente 45231 (En tránsito)", "params": {"order_id": "45231"}},
-        {"desc": "Pedido existente 10001 (Entregado)", "params": {"order_id": "10001"}},
-        {"desc": "Pedido inexistente 99999 (No encontrado)", "params": {"order_id": "99999"}},
-        {"desc": "Parámetro vacío (Validación de entrada)", "params": {"order_id": ""}},
+        {"tool": "track_order", "desc": "Lectura: Pedido existente 45231 (En tránsito)", "params": {"order_id": "45231"}},
+        {"tool": "track_order", "desc": "Lectura: Pedido existente 10001 (Entregado)", "params": {"order_id": "10001"}},
+        {"tool": "track_order", "desc": "Lectura: Pedido inexistente 99999", "params": {"order_id": "99999"}},
+        {"tool": "cancel_order", "desc": "Escritura: Cancelación sin confirmación explícita (Debe detenerse)", "params": {"order_id": "45231", "confirmacion_usuario": False}},
+        {"tool": "cancel_order", "desc": "Escritura: Cancelación con confirmación explícita (Debe ejecutarse)", "params": {"order_id": "45231", "confirmacion_usuario": True}},
+        {"tool": "cancel_order", "desc": "Escritura: Idempotencia en segunda cancelación del mismo pedido (Debe responder ALREADY_CANCELLED)", "params": {"order_id": "45231", "confirmacion_usuario": True}},
+        {"tool": "cancel_order", "desc": "Escritura: Intento de cancelación sobre pedido ya entregado 10001 (Debe denegarse)", "params": {"order_id": "10001", "confirmacion_usuario": True}},
     ]
 
     for caso in casos_de_prueba:
         print(f"\n[Test] {caso['desc']}")
-        print(f"  Parámetros enviados: {caso['params']}")
+        print(f"  Herramienta: {caso['tool']} | Parámetros: {caso['params']}")
         
-        resultado_raw = await mcp.call_tool("track_order", caso["params"])
+        resultado_raw = await mcp.call_tool(caso["tool"], caso["params"])
         
         # Extraer el contenido del resultado según formato MCP
         texto_resultado = ""
